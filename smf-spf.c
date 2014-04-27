@@ -172,6 +172,7 @@ static facilities syslog_facilities[] = {
     { "local6", LOG_LOCAL6 },
     { "local7", LOG_LOCAL7 }
 };
+static char *authserv_id = NULL;
 
 static sfsistat smf_connect(SMFICTX *, char *, _SOCK_ADDR *);
 static sfsistat smf_helo(SMFICTX *, char *);
@@ -602,6 +603,17 @@ static sfsistat smf_connect(SMFICTX *ctx, char *name, _SOCK_ADDR *sa) {
     struct context *context = NULL;
     char host[64];
 
+    if (authserv_id == NULL) {
+        char* p = NULL;
+        if (((p = smfi_getsymval(ctx, "{j}"))) == NULL) {
+            syslog(LOG_ERR, "[ERROR] can't get MTA-name");
+            return SMFIS_ACCEPT;
+        }
+        if ((authserv_id = strdup(p)) == NULL) {
+            syslog(LOG_ERR, "[ERROR] can't save MTA-name");
+            return SMFIS_ACCEPT;
+        }
+    }
     strscpy(host, "undefined", sizeof(host) - 1);
     switch (sa->sa_family) {
 	case AF_INET: {
@@ -807,32 +819,31 @@ static sfsistat smf_eom(SMFICTX *ctx) {
     if (conf.add_header) {
 	char *spf_hdr = NULL;
 
-	smfi_addheader(ctx, "X-SPF-Scan-By", "smf-spf v2.0.2 - http://smfs.sf.net/");
 	if ((spf_hdr = calloc(1, 512))) {
 	    switch (context->status) {
 		case SPF_RESULT_PASS:
-		    snprintf(spf_hdr, 512, "Pass (%s: domain of %s\n\tdesignates %s as permitted sender)\n\treceiver=%s; client-ip=%s;\n\tenvelope-from=%s; helo=%s;",
-			context->site, context->sender, context->addr, context->site, context->addr, context->from, context->helo);
+		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
+			authserv_id, "pass", context->from, context->helo);
 		    break;
 		case SPF_RESULT_FAIL:
-		    snprintf(spf_hdr, 512, "Fail (%s: domain of %s\n\tdoes not designate %s as permitted sender)\n\treceiver=%s; client-ip=%s;\n\tenvelope-from=%s; helo=%s;",
-			context->site, context->sender, context->addr, context->site, context->addr, context->from, context->helo);
+		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
+			authserv_id, "fail", context->from, context->helo);
 		    break;
 		case SPF_RESULT_SOFTFAIL:
-		    snprintf(spf_hdr, 512, "SoftFail (%s: transitioning domain of %s\n\tdoes not designate %s as permitted sender)\n\treceiver=%s; client-ip=%s;\n\tenvelope-from=%s; helo=%s;",
-			context->site, context->sender, context->addr, context->site, context->addr, context->from, context->helo);
+		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
+			authserv_id, "softfail", context->from, context->helo);
 		    break;
 		case SPF_RESULT_NEUTRAL:
-		    snprintf(spf_hdr, 512, "Neutral (%s: %s is neither permitted\n\tnor denied by domain of %s)\n\treceiver=%s; client-ip=%s;\n\tenvelope-from=%s; helo=%s;",
-			context->site, context->addr, context->sender, context->site, context->addr, context->from, context->helo);
+		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
+			authserv_id, "neutral", context->from, context->helo);
 		    break;
 		case SPF_RESULT_NONE:
 		default:
-		    snprintf(spf_hdr, 512, "None (%s: domain of %s\n\tdoes not designate permitted sender hosts)\n\treceiver=%s; client-ip=%s;\n\tenvelope-from=%s; helo=%s;",
-			context->site, context->sender, context->site, context->addr, context->from, context->helo);
+		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
+			authserv_id, "none", context->from, context->helo);
 		    break;
 	    }
-	    smfi_addheader(ctx, "Received-SPF", spf_hdr);
+	    smfi_addheader(ctx, "Authentication-Results", spf_hdr);
 	    free(spf_hdr);
 	}
     }
