@@ -697,7 +697,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	status = cache_get(context->key);
 	mutex_unlock(&cache_mutex);
 	if (status != SPF_RESULT_INVALID) {
-	    syslog(LOG_INFO, "SPF %s (cached): %s, %s, %s, %s", SPF_strresult(status), context->addr, context->fqdn, context->helo, context->from);
+	    syslog(LOG_INFO, "SPF %s (cached): ip=%s, fqdn=%s, helo=%s, from=%s", SPF_strresult(status), context->addr, context->fqdn, context->helo, context->from);
 	    if (status == SPF_RESULT_FAIL && conf.refuse_fail && !conf.tos) {
 		char reject[2 * MAXLINE];
 
@@ -720,7 +720,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     SPF_request_set_helo_dom(spf_request, context->helo);
     SPF_request_set_env_from(spf_request, context->sender);
     if (SPF_request_query_mailfrom(spf_request, &spf_response)) {
-	syslog(LOG_INFO, "SPF none: %s, %s, %s, %s", context->addr, context->fqdn, context->helo, context->from);
+	syslog(LOG_INFO, "SPF none: ip=%s, fqdn=%s, helo=%s, from=%s", context->addr, context->fqdn, context->helo, context->from);
 	if (cache && conf.spf_ttl) {
 	    mutex_lock(&cache_mutex);
 	    cache_put(context->key, conf.spf_ttl, SPF_RESULT_NONE);
@@ -730,7 +730,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     }
     if (!spf_response) goto done;
     status = SPF_response_result(spf_response);
-    syslog(LOG_NOTICE, "SPF %s: %s, %s, %s, %s", SPF_strresult(status), context->addr, context->fqdn, context->helo, context->from);
+    syslog(LOG_NOTICE, "SPF %s: ip=%s, fqdn=%s, helo=%s, from=%s", SPF_strresult(status), context->addr, context->fqdn, context->helo, context->from);
     switch (status) {
 	case SPF_RESULT_PASS:
 	case SPF_RESULT_FAIL:
@@ -918,9 +918,10 @@ int main(int argc, char **argv) {
     }
     memset(&conf, 0, sizeof(conf));
     regcomp(&re_ipv4, IPV4_DOT_DECIMAL, REG_EXTENDED|REG_ICASE);
-    if (!load_config()) fprintf(stderr, "Warning: smf-spf configuration file load failed\n");
+    if (!load_config()) fprintf(stderr, "Warning: smf-spf: loading configuration file %s failed\n", config_file);
     tzset();
     openlog("smf-spf", LOG_PID|LOG_NDELAY, conf.syslog_facility);
+    syslog(LOG_INFO, "starting smf-spf 2.0.2 listening on %s", conf.sendmail_socket);
     if (!strncmp(conf.sendmail_socket, "unix:", 5))
 	ofile = conf.sendmail_socket + 5;
     else
@@ -942,6 +943,7 @@ int main(int argc, char **argv) {
 	    fprintf(stderr, "setuid: %s\n", strerror(errno));
 	    goto done;
 	}
+        syslog(LOG_INFO, "running as uid: %i, gid: %i", (int) pw->pw_uid, (int) pw->pw_gid);
     }
     if (smfi_setconn((char *)conf.sendmail_socket) != MI_SUCCESS) {
 	fprintf(stderr, "smfi_setconn failed: %s\n", conf.sendmail_socket);
@@ -963,6 +965,7 @@ int main(int argc, char **argv) {
     if (conf.spf_ttl && !cache_init()) syslog(LOG_ERR, "[ERROR] cache engine init failed");
     ret = smfi_main();
     if (ret != MI_SUCCESS) syslog(LOG_ERR, "[ERROR] terminated due to a fatal error");
+    else syslog(LOG_NOTICE, "stopping smf-spf 2.0.2 listening on %s", conf.sendmail_socket);
     if (cache) cache_destroy();
     pthread_mutex_destroy(&cache_mutex);
 done:
