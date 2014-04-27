@@ -1,0 +1,22 @@
+#!/bin/sh
+
+# PROVIDE: smf-spf
+# REQUIRE: NETWORKING
+# BEFORE: sendmail
+
+# Written for FreeBSD.
+#
+# Copy this file into /etc/rc.d as /etc/rc.d/smfspf
+# Add this line to /etc/rc.conf:
+#
+# smfspf_enable="YES"
+
+. /etc/rc.subr
+
+name="smfspf"
+rcvar=`set_rcvar`
+command="/usr/local/sbin/smf-spf"
+
+load_rc_config ${name}
+run_rc_command "$1"
+
