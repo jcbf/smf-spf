@@ -716,6 +716,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     SPF_server_set_rec_dom(spf_server, context->site);
     if (!(spf_request = SPF_request_new(spf_server))) goto done;
     SPF_request_set_ipv4_str(spf_request, context->addr);
+    SPF_request_set_ipv6_str(spf_request, context->addr);
     SPF_request_set_helo_dom(spf_request, context->helo);
     SPF_request_set_env_from(spf_request, context->sender);
     if (SPF_request_query_mailfrom(spf_request, &spf_response)) {
