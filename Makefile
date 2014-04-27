@@ -5,10 +5,10 @@ DATADIR = /var/run/smfs
 CONFDIR = /etc/mail/smfs
 USER = smfs
 GROUP = smfs
-CFLAGS = -O2 -D_REENTRANT -fomit-frame-pointer -I/usr/local/include
+CFLAGS = -O2 -D_REENTRANT -fomit-frame-pointer -I/usr/local/include 
 
 # Linux
-LDFLAGS = -lmilter -lpthread -L/usr/local/lib -lspf2
+LDFLAGS = -lmilter -lpthread -L/usr/lib/libmilter -L/usr/local/lib -lspf2
 
 # FreeBSD
 #LDFLAGS = -lmilter -pthread -L/usr/local/lib -lspf2
