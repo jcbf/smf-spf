@@ -223,7 +223,7 @@ static unsigned long translate(char *value) {
 
 static unsigned long hash_code(register const unsigned char *key) {
     register unsigned long hash = 0;
-    register size_t i, len = strlen(key);
+    register size_t i, len = strlen((char *)key);
 
     for (i = 0; i < len; i++) {
 	hash += key[i];
@@ -259,7 +259,7 @@ static void cache_destroy(void) {
 }
 
 static SPF_result_t cache_get(const char *key) {
-    unsigned long hash = hash_code(key);
+    unsigned long hash = hash_code((unsigned char*) key);
     cache_item *it = cache[hash & hash_mask(HASH_POWER)];
     time_t curtime = time(NULL);
 
@@ -271,7 +271,7 @@ static SPF_result_t cache_get(const char *key) {
 }
 
 static void cache_put(const char *key, unsigned long ttl, SPF_result_t status) {
-    unsigned long hash = hash_code(key);
+    unsigned long hash = hash_code((unsigned char*) key);
     time_t curtime = time(NULL);
     cache_item *it, *parent = NULL;
 
