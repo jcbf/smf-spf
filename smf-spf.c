@@ -843,7 +843,7 @@ static sfsistat smf_eom(SMFICTX *ctx) {
 			authserv_id, "none", context->from, context->helo);
 		    break;
 	    }
-	    smfi_addheader(ctx, "Authentication-Results", spf_hdr);
+	    smfi_insheader(ctx, 1, "Authentication-Results", spf_hdr);
 	    free(spf_hdr);
 	}
     }
