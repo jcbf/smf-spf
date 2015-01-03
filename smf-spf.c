@@ -702,7 +702,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 		char reject[2 * MAXLINE];
 
 		snprintf(reject, sizeof(reject), "Rejected, look at http://www.openspf.org/why.html?sender=%s&ip=%s&receiver=%s", context->sender, context->addr, context->site);
-		smfi_setreply(ctx, "550", "5.7.1", reject);
+		smfi_setreply(ctx, "550", "5.7.23", reject);
 		return SMFIS_REJECT;
 	    }
 	    context->status = status;
@@ -753,7 +753,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	if (spf_response) SPF_response_free(spf_response);
 	if (spf_request) SPF_request_free(spf_request);
 	if (spf_server) SPF_server_free(spf_server);
-	smfi_setreply(ctx, "550", "5.7.1", reject);
+	smfi_setreply(ctx, "550", "5.7.23", reject);
 	return SMFIS_REJECT;
     }
 done:
