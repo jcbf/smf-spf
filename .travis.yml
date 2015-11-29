@@ -1,0 +1,11 @@
+# .travis.yml -- Travis CI configuration for the MPS
+# See <http://about.travis-ci.org/docs/user/languages/c/>.
+language: c
+compiler:
+  - clang
+  - gcc
+notifications:
+  email:
+    - underspell@gmail.com
+script:
+  - ./configure --prefix=$PWD/prefix && make install && make test
