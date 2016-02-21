@@ -24,7 +24,7 @@ case "$1" in
     start)
         log_begin_msg "Starting smf-spf..."
         mkdir -p /var/run/smf-spf
-        chown smf-spf:smf-spf /var/run/smf-spf
+        chown smfs:smfs /var/run/smf-spf
         start-stop-daemon --start --quiet --oknodo --exec "$DAEMON" -- $OPTIONS
         log_end_msg $?
 
