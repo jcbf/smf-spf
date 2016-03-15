@@ -161,6 +161,7 @@ struct context {
 static regex_t re_ipv4;
 static cache_item **cache = NULL;
 static const char *config_file = CONFIG_FILE;
+static int foreground = 0;
 static config conf;
 static pthread_mutex_t cache_mutex;
 static facilities syslog_facilities[] = {
@@ -912,11 +913,14 @@ int main(int argc, char **argv) {
     const char *ofile = NULL;
     int ch, ret = 0;
 
-    while ((ch = getopt(argc, argv, "hc:")) != -1) {
+    while ((ch = getopt(argc, argv, "fhc:")) != -1) {
 	switch (ch) {
 	    case 'h':
-		fprintf(stderr, "Usage: smf-spf -c <config file>\n");
+		fprintf(stderr, "Usage: smf-spf [-f] -c <config file>\n");
 		return 0;
+	    case 'f':
+		if (optarg) foreground = 1;
+		break;
 	    case 'c':
 		if (optarg) config_file = optarg;
 		break;
@@ -961,7 +965,7 @@ int main(int argc, char **argv) {
 	fprintf(stderr, "smfi_register failed\n");
 	goto done;
     }
-    if (conf.daemonize && daemon(0, 0)) {
+    if (!foreground && conf.daemonize && daemon(0, 0)) {
 	fprintf(stderr, "daemonize failed: %s\n", strerror(errno));
 	goto done;
     }
