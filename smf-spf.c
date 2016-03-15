@@ -54,6 +54,7 @@
 #define TAG_SUBJECT		1
 #define ADD_HEADER		1
 #define QUARANTINE		0
+#define DAEMONIZE		1
 
 #define MAXLINE			128
 #define HASH_POWER		16
@@ -132,6 +133,7 @@ typedef struct config {
     int add_header;
     int quarantine;
     int syslog_facility;
+    int daemonize;
     unsigned long spf_ttl;
 } config;
 
@@ -366,6 +368,7 @@ static int load_config(void) {
     conf.add_header = ADD_HEADER;
     conf.quarantine = QUARANTINE;
     conf.spf_ttl = SPF_TTL;
+    conf.daemonize = DAEMONIZE;
     if (!(fp = fopen(config_file, "r"))) return 0;
     while (fgets(buf, sizeof(buf) - 1, fp)) {
 	char key[MAXLINE];
@@ -466,6 +469,10 @@ static int load_config(void) {
 	}
 	if (!strcasecmp(key, "quarantine") && !strcasecmp(val, "on")) {
 	    conf.quarantine = 1;
+	    continue;
+	}
+	if (!strcasecmp(key, "daemonize") && !strcasecmp(val, "off")) {
+	    conf.daemonize = 0;
 	    continue;
 	}
 	if (!strcasecmp(key, "quarantinebox")) {
@@ -953,7 +960,7 @@ int main(int argc, char **argv) {
 	fprintf(stderr, "smfi_register failed\n");
 	goto done;
     }
-    if (daemon(0, 0)) {
+    if (conf.daemonize && daemon(0, 0)) {
 	fprintf(stderr, "daemonize failed: %s\n", strerror(errno));
 	goto done;
     }
