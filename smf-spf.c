@@ -56,7 +56,7 @@
 #define QUARANTINE		0
 #define DAEMONIZE		1
 
-#define MAXLINE			128
+#define MAXLINE			258
 #define HASH_POWER		16
 #define FACILITIES_AMOUNT	10
 #define IPV4_DOT_DECIMAL	"^[0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}$"
