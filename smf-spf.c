@@ -55,6 +55,7 @@
 #define ADD_HEADER		1
 #define QUARANTINE		0
 #define DAEMONIZE		1
+#define VERSION			"2.0.2b"
 
 #define MAXLINE			258
 #define HASH_POWER		16
@@ -972,7 +973,7 @@ int main(int argc, char **argv) {
     if (conf.spf_ttl && !cache_init()) syslog(LOG_ERR, "[ERROR] cache engine init failed");
     ret = smfi_main();
     if (ret != MI_SUCCESS) syslog(LOG_ERR, "[ERROR] terminated due to a fatal error");
-    else syslog(LOG_NOTICE, "stopping smf-spf 2.0.2 listening on %s", conf.sendmail_socket);
+    else syslog(LOG_NOTICE, "stopping smf-spf %s listening on %s", VERSION,  conf.sendmail_socket);
     if (cache) cache_destroy();
     pthread_mutex_destroy(&cache_mutex);
 done:
