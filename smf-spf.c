@@ -51,6 +51,7 @@
 #define SYSLOG_FACILITY		LOG_MAIL
 #define SPF_TTL			3600
 #define REFUSE_FAIL		1
+#define SOFT_FAIL		0
 #define TAG_SUBJECT		1
 #define ADD_HEADER		1
 #define QUARANTINE		0
@@ -130,6 +131,7 @@ typedef struct config {
     STR *froms;
     STR *tos;
     int refuse_fail;
+    int soft_fail;
     int tag_subject;
     int add_header;
     int quarantine;
@@ -366,6 +368,7 @@ static int load_config(void) {
     conf.sendmail_socket = strdup(OCONN);
     conf.syslog_facility = SYSLOG_FACILITY;
     conf.refuse_fail = REFUSE_FAIL;
+    conf.soft_fail = SOFT_FAIL;
     conf.tag_subject = TAG_SUBJECT;
     conf.add_header = ADD_HEADER;
     conf.quarantine = QUARANTINE;
@@ -450,6 +453,10 @@ static int load_config(void) {
 		strtolower(val);
 		conf.tos->str = strdup(val);
 	    }
+	    continue;
+	}
+	if (!strcasecmp(key, "softfail") && !strcasecmp(val, "on")) {
+	    conf.soft_fail = 1;
 	    continue;
 	}
 	if (!strcasecmp(key, "refusefail") && !strcasecmp(val, "off")) {
@@ -676,7 +683,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     }
     else
 	if (!address_preparation(context->sender, context->from)) {
-	    smfi_setreply(ctx, "550", "5.1.7", "Sender address does not conform to RFC-2821 syntax");
+	    smfi_setreply(ctx, conf.softfail ? "450" : "550", conf.soft_fail ? "4.1.7" : "5.1.7", "Sender address does not conform to RFC-2821 syntax");
 	    return SMFIS_REJECT;
 	}
     if (!strstr(context->from, "<>")) {
@@ -711,7 +718,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 		char reject[2 * MAXLINE];
 
 		snprintf(reject, sizeof(reject), "Rejected, look at http://www.openspf.org/why.html?sender=%s&ip=%s&receiver=%s", context->sender, context->addr, context->site);
-		smfi_setreply(ctx, "550", "5.7.23", reject);
+		smfi_setreply(ctx, conf.soft_fail ? "450" : "550", conf.soft_fail ? "4.7.23" :  "4.7.23", reject);
 		return SMFIS_REJECT;
 	    }
 	    context->status = status;
@@ -762,7 +769,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	if (spf_response) SPF_response_free(spf_response);
 	if (spf_request) SPF_request_free(spf_request);
 	if (spf_server) SPF_server_free(spf_server);
-	smfi_setreply(ctx, "550", "5.7.23", reject);
+	smfi_setreply(ctx, conf.soft_fail ? "450" : "550", conf.soft_fail ? "4.7.23" : "4.7.23", reject);
 	return SMFIS_REJECT;
     }
 done:
@@ -777,7 +784,7 @@ static sfsistat smf_envrcpt(SMFICTX *ctx, char **args) {
 
     if (*args) strscpy(context->rcpt, *args, sizeof(context->rcpt) - 1);
     if (!address_preparation(context->recipient, context->rcpt)) {
-	smfi_setreply(ctx, "550", "5.1.3", "Recipient address does not conform to RFC-2821 syntax");
+	smfi_setreply(ctx, conf.soft_fail ? "450" : "550", conf.soft_fail ? "4.1.3" : "5.1.3", "Recipient address does not conform to RFC-2821 syntax");
 	return SMFIS_REJECT;
     }
     if (conf.tos) {
@@ -787,7 +794,7 @@ static sfsistat smf_envrcpt(SMFICTX *ctx, char **args) {
 	    char reject[2 * MAXLINE];
 
 	    snprintf(reject, sizeof(reject), "Rejected, look at http://www.openspf.org/why.html?sender=%s&ip=%s&receiver=%s", context->sender, context->addr, context->site);
-	    smfi_setreply(ctx, "550", "5.1.1", reject);
+	    smfi_setreply(ctx, conf.soft_fail ? "450" : "550", conf.soft_fail ? "4.1.1" : "5.1.1", reject);
 	    return SMFIS_REJECT;
 	}
     }
