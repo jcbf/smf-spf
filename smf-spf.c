@@ -56,7 +56,7 @@
 #define ADD_HEADER		1
 #define QUARANTINE		0
 #define DAEMONIZE		1
-#define VERSION			"2.0.2b"
+#define VERSION			"2.1.0"
 
 #define MAXLINE			258
 #define HASH_POWER		16
