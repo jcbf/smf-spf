@@ -683,7 +683,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     }
     else
 	if (!address_preparation(context->sender, context->from)) {
-	    smfi_setreply(ctx, conf.softfail ? "450" : "550", conf.soft_fail ? "4.1.7" : "5.1.7", "Sender address does not conform to RFC-2821 syntax");
+	    smfi_setreply(ctx, conf.soft_fail ? "450" : "550", conf.soft_fail ? "4.1.7" : "5.1.7", "Sender address does not conform to RFC-2821 syntax");
 	    return SMFIS_REJECT;
 	}
     if (!strstr(context->from, "<>")) {
