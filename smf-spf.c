@@ -683,7 +683,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     }
     else
 	if (!address_preparation(context->sender, context->from)) {
-	    smfi_setreply(ctx, conf.softfail ? "450" : "550", conf.soft_fail ? "4.1.7" : "5.1.7", "Sender address does not conform to RFC-2821 syntax");
+	    smfi_setreply(ctx, conf.soft_fail ? "450" : "550", conf.soft_fail ? "4.1.7" : "5.1.7", "Sender address does not conform to RFC-2821 syntax");
 	    return SMFIS_REJECT;
 	}
     if (!strstr(context->from, "<>")) {
@@ -940,7 +940,7 @@ int main(int argc, char **argv) {
     if (!load_config()) fprintf(stderr, "Warning: smf-spf: loading configuration file %s failed\n", config_file);
     tzset();
     openlog("smf-spf", LOG_PID|LOG_NDELAY, conf.syslog_facility);
-    syslog(LOG_INFO, "starting smf-spf 2.0.2 listening on %s", conf.sendmail_socket);
+    syslog(LOG_INFO, "starting smf-spf %s listening on %s", VERSION, conf.sendmail_socket);
     if (!strncmp(conf.sendmail_socket, "unix:", 5))
 	ofile = conf.sendmail_socket + 5;
     else
@@ -984,7 +984,7 @@ int main(int argc, char **argv) {
     if (conf.spf_ttl && !cache_init()) syslog(LOG_ERR, "[ERROR] cache engine init failed");
     ret = smfi_main();
     if (ret != MI_SUCCESS) syslog(LOG_ERR, "[ERROR] terminated due to a fatal error");
-    else syslog(LOG_NOTICE, "stopping smf-spf %s listening on %s", VERSION,  conf.sendmail_socket);
+    else syslog(LOG_NOTICE, "stopping smf-spf %s listening on %s", VERSION, conf.sendmail_socket);
     if (cache) cache_destroy();
     pthread_mutex_destroy(&cache_mutex);
 done:
