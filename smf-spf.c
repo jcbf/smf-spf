@@ -52,6 +52,7 @@
 #define SPF_TTL			3600
 #define REFUSE_FAIL		1
 #define SOFT_FAIL		0
+#define ACCEPT_PERMERR		1
 #define TAG_SUBJECT		1
 #define ADD_HEADER		1
 #define QUARANTINE		0
@@ -132,6 +133,7 @@ typedef struct config {
     STR *tos;
     int refuse_fail;
     int soft_fail;
+    int accept_temperror;
     int tag_subject;
     int add_header;
     int quarantine;
@@ -369,6 +371,7 @@ static int load_config(void) {
     conf.syslog_facility = SYSLOG_FACILITY;
     conf.refuse_fail = REFUSE_FAIL;
     conf.soft_fail = SOFT_FAIL;
+    conf.accept_temperror = ACCEPT_PERMERR;
     conf.tag_subject = TAG_SUBJECT;
     conf.add_header = ADD_HEADER;
     conf.quarantine = QUARANTINE;
@@ -453,6 +456,10 @@ static int load_config(void) {
 		strtolower(val);
 		conf.tos->str = strdup(val);
 	    }
+	    continue;
+	}
+	if (!strcasecmp(key, "accepttemperror") && !strcasecmp(val, "off")) {
+	    conf.accept_temperror = 0;
 	    continue;
 	}
 	if (!strcasecmp(key, "softfail") && !strcasecmp(val, "on")) {
@@ -761,6 +768,16 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	    break;
 	default:
 	    break;
+    }
+    if (status == SPF_RESULT_TEMPERROR && !accept_temperror) {
+	char reject[2 * MAXLINE];
+
+	snprintf(reject, sizeof(reject), "Found a problem processing SFP for %s. Error: %s", context->sender,  SPF_strreason(spf_response->reason));
+	if (spf_response) SPF_response_free(spf_response);
+	if (spf_request) SPF_request_free(spf_request);
+	if (spf_server) SPF_server_free(spf_server);
+	smfi_setreply(ctx, "451" , "4.4.3", reject);
+	return SMFIS_REJECT;
     }
     if (status == SPF_RESULT_FAIL && conf.refuse_fail && !conf.tos) {
 	char reject[2 * MAXLINE];
