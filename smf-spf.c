@@ -769,7 +769,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	default:
 	    break;
     }
-    if (status == SPF_RESULT_TEMPERROR && !accept_temperror) {
+    if (status == SPF_RESULT_TEMPERROR && !conf.accept_temperror) {
 	char reject[2 * MAXLINE];
 
 	snprintf(reject, sizeof(reject), "Found a problem processing SFP for %s. Error: %s", context->sender,  SPF_strreason(spf_response->reason));
