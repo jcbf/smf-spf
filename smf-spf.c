@@ -857,24 +857,24 @@ static sfsistat smf_eom(SMFICTX *ctx) {
 	    switch (context->status) {
 		case SPF_RESULT_PASS:
 		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
-			authserv_id, "pass", context->from, context->helo);
+			authserv_id, "pass", context->sender, context->helo);
 		    break;
 		case SPF_RESULT_FAIL:
 		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
-			authserv_id, "fail", context->from, context->helo);
+			authserv_id, "fail", context->sender, context->helo);
 		    break;
 		case SPF_RESULT_SOFTFAIL:
 		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
-			authserv_id, "softfail", context->from, context->helo);
+			authserv_id, "softfail", context->sender, context->helo);
 		    break;
 		case SPF_RESULT_NEUTRAL:
 		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
-			authserv_id, "neutral", context->from, context->helo);
+			authserv_id, "neutral", context->sender, context->helo);
 		    break;
 		case SPF_RESULT_NONE:
 		default:
 		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
-			authserv_id, "none", context->from, context->helo);
+			authserv_id, "none", context->sender, context->helo);
 		    break;
 	    }
 	    smfi_insheader(ctx, 1, "Authentication-Results", spf_hdr);
