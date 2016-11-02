@@ -639,7 +639,7 @@ static sfsistat smf_connect(SMFICTX *ctx, char *name, _SOCK_ADDR *sa) {
     }
 
     if (sa == NULL)
-        return SMFIS_CONTINUE;
+        return SMFIS_ACCEPT;
 
     strscpy(host, "undefined", sizeof(host) - 1);
     switch (sa->sa_family) {
