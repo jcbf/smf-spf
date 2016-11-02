@@ -637,6 +637,10 @@ static sfsistat smf_connect(SMFICTX *ctx, char *name, _SOCK_ADDR *sa) {
             return SMFIS_ACCEPT;
         }
     }
+
+    if (sa == NULL)
+        return SMFIS_CONTINUE;
+
     strscpy(host, "undefined", sizeof(host) - 1);
     switch (sa->sa_family) {
 	case AF_INET: {
