@@ -639,7 +639,10 @@ static sfsistat smf_connect(SMFICTX *ctx, char *name, _SOCK_ADDR *sa) {
     }
 
     if (sa == NULL)
+    {
+        syslog(LOG_NOTICE, "unknown sender IP address, skipping SPF check");
         return SMFIS_ACCEPT;
+    }
 
     strscpy(host, "undefined", sizeof(host) - 1);
     switch (sa->sa_family) {
