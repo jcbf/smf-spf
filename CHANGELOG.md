@@ -2,12 +2,37 @@
 
 ## [Unreleased](https://github.com/jcbf/smf-spf/tree/HEAD)
 
+[Full Changelog](https://github.com/jcbf/smf-spf/compare/v2.1.1...HEAD)
 
-# Change Log
+**Fixed bugs:**
+
+- fix segfault when server address is unknown [\#21](https://github.com/jcbf/smf-spf/pull/21) ([Milek7](https://github.com/Milek7))
+
+**Merged pull requests:**
+
+- don't include \<\> characters in Authentication-Results header [\#20](https://github.com/jcbf/smf-spf/pull/20) ([Milek7](https://github.com/Milek7))
+
+## [v2.1.1](https://github.com/jcbf/smf-spf/tree/v2.1.1) (2016-09-21)
+[Full Changelog](https://github.com/jcbf/smf-spf/compare/v2.1.0...v2.1.1)
 
 **Implemented enhancements:**
 
 - handle SPF\_RESULT\_TEMPERROR result [\#14](https://github.com/jcbf/smf-spf/issues/14)
+
+**Fixed bugs:**
+
+- Uncompilable release [\#19](https://github.com/jcbf/smf-spf/issues/19)
+
+**Closed issues:**
+
+- Make a release [\#10](https://github.com/jcbf/smf-spf/issues/10)
+
+## [v2.1.0](https://github.com/jcbf/smf-spf/tree/v2.1.0) (2016-09-19)
+[Full Changelog](https://github.com/jcbf/smf-spf/compare/v2.2.0...v2.1.0)
+
+## [v2.2.0](https://github.com/jcbf/smf-spf/tree/v2.2.0) (2016-09-19)
+**Implemented enhancements:**
+
 - Refuse messages with softfail [\#8](https://github.com/jcbf/smf-spf/issues/8)
 - MAIL and RCPT limits are not RFC compliant [\#4](https://github.com/jcbf/smf-spf/issues/4)
 - mail-filter/smf-spf-2.0.2 patches [\#1](https://github.com/jcbf/smf-spf/issues/1)
@@ -20,7 +45,7 @@
 
 - Fix RFC5321 path limit [\#5](https://github.com/jcbf/smf-spf/pull/5) ([jcbf](https://github.com/jcbf))
 
-**Contributed changes:**
+**Merged pull requests:**
 
 - Support for temperror handling. [\#18](https://github.com/jcbf/smf-spf/pull/18) ([jcbf](https://github.com/jcbf))
 - Fix for \#8 [\#16](https://github.com/jcbf/smf-spf/pull/16) ([jcbf](https://github.com/jcbf))
@@ -28,20 +53,6 @@
 - Fix version usage [\#13](https://github.com/jcbf/smf-spf/pull/13) ([tyranron](https://github.com/tyranron))
 - One more typo fix for conf.soft\_fail property [\#12](https://github.com/jcbf/smf-spf/pull/12) ([tyranron](https://github.com/tyranron))
 - Fix for \#8 - Allow softfail when refusing email [\#9](https://github.com/jcbf/smf-spf/pull/9) ([jcbf](https://github.com/jcbf))
-
-
-**Implemented enhancements:**
-
-- MAIL and RCPT limits are not RFC compliant [\#4](https://github.com/jcbf/smf-spf/issues/4)
-- mail-filter/smf-spf-2.0.2 patches [\#1](https://github.com/jcbf/smf-spf/issues/1)
-- daemonize option via command line [\#7](https://github.com/jcbf/smf-spf/pull/7) ([jcbf](https://github.com/jcbf))
--  \*  Bumped version [\#6](https://github.com/jcbf/smf-spf/pull/6) ([jcbf](https://github.com/jcbf))
-- Debian init [\#3](https://github.com/jcbf/smf-spf/pull/3) ([whyscream](https://github.com/whyscream))
-- Add support for daemonisation in config file [\#2](https://github.com/jcbf/smf-spf/pull/2) ([whyscream](https://github.com/whyscream))
-
-**Fixed bugs:**
-
-- Fix RFC5321 path limit [\#5](https://github.com/jcbf/smf-spf/pull/5) ([jcbf](https://github.com/jcbf))
 
 
 
