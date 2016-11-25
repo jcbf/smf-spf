@@ -9,7 +9,13 @@ notifications:
     - underspell@gmail.com
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install -y libmilter-dev libspf2-dev libspf2-2 opendkim-tools
-script:
-  -  make 
+  - sudo apt-get install -y libmilter-dev libspf2-dev libspf2-2 opendkim-tools lcov
+ script:
+  -  make
+  -  make coverage
   - ./run_tests.sh
+after_success:
+  - lcov --directory . --capture --output-file coverage.info
+  - lcov --remove coverage.info 'tests/*' --output-file coverage.info
+  - lcov --list coverage.info
+  - coveralls-lcov --repo-token ${COVERALLS_TOKEN} coverage.info
