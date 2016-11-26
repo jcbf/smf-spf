@@ -1,6 +1,5 @@
--- Copyright (c) 2009-2013, The Trusted Domain Project.  All rights reserved.
 
-mt.echo("*** Full test")
+mt.echo("SPF fail  test")
 
 -- try to start the filter
 mt.startfilter("./smf-spf", "-f", "-c","./smf-spf-tests.conf")

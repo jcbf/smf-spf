@@ -1,6 +1,5 @@
 -- Copyright (c) 2009-2013, The Trusted Domain Project.  All rights reserved.
-
-mt.echo("*** Full test")
+mt.echo("SPF pass  test")
 
 -- try to start the filter
 mt.startfilter("./smf-spf", "-f", "-c","./smf-spf-tests.conf")
@@ -64,7 +63,7 @@ if mt.eom_check(conn, MT_HDRINSERT, "Authentication-Results") or
 	if string.find(ar, "spf=pass", 1, true) == nil then
 		error("incorrect Authentication-Results field")
 	else
-		mt.echo("SPF failed as expected")
+		mt.echo("SPF pass ")
 	end
 else
 	error("missing Authentication-Results field")

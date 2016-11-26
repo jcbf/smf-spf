@@ -1,4 +1,4 @@
-mt.echo("*** SPF teste ")
+mt.echo("Ip address whitelisted")
 
 -- try to start the filter
 mt.startfilter("./smf-spf", "-f", "-c","./smf-spf-tests.conf")

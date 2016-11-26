@@ -1,4 +1,4 @@
-mt.echo("*** SPF test")
+mt.echo("Unspec IP address")
 
 -- try to start the filter
 mt.startfilter("./smf-spf", "-f", "-c","./smf-spf-tests.conf")
@@ -16,4 +16,8 @@ if mt.conninfo(conn, "a.server.name.local", "unspec") ~= nil then
 	error("mt.conninfo() failed")
 end
 
-print ("mt.conninfo() received ",mt.getreply(conn) )
+if mt.getreply(conn) ~= SMFIR_ACCEPT then
+        error("mt.header(Subject) unexpected reply")
+end
+
+print (" received  SMFIR_ACCEPT");

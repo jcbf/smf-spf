@@ -5,4 +5,4 @@ if conn == nil then
         error("mt.connect() failed")
 end
 
-print "Connect OK"
+print "Connect to Milter:  OK"

@@ -1,4 +1,4 @@
-mt.echo("*** SPF teste ")
+mt.echo("Invalid recipient")
 
 -- try to start the filter
 mt.startfilter("./smf-spf", "-f", "-c","./smf-spf-tests.conf")
@@ -33,4 +33,4 @@ if mt.getreply(conn) ~= SMFIR_REPLYCODE then
         error("mt.mailfrom() unexpected reply")
 end
 
-print ("Invalid rcpt to received SMFIR_REPLYCODE ") )
+print ("received SMFIR_REPLYCODE ") 

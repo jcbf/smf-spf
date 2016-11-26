@@ -1,5 +1,4 @@
-
-t.echo("*** no mta name , {j} not sent")
+mt.echo("no mta name , {j} not sent")
 
 -- try to start the filter
 mt.startfilter("./smf-spf", "-f", "-c","./smf-spf-tests.conf")
