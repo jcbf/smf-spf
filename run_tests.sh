@@ -1,5 +1,5 @@
 #!/bin/bash
 
 for testfile in tests/* ; do
-	miltertest -s $testfile
+	miltertest -vv -s $testfile
 done
