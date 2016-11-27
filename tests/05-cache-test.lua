@@ -132,6 +132,7 @@ if mt.eom_check(conn, MT_HDRINSERT, "Authentication-Results") or
 		mt.echo("SPF pass ")
 	end
 else
+	mt.echo ("Got header Authentication-Results: " .. ar)
 	error("missing Authentication-Results field")
 end
 
