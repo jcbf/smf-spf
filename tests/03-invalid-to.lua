@@ -29,8 +29,8 @@ mt.macro(conn, SMFIC_RCPT, "i", "t-verify-malformed")
 if mt.rcptto(conn, "user@underspell.com") ~= nil then
         error("mt.mailfrom() failed")
 end
-if mt.getreply(conn) ~= SMFIR_REPLYCODE then
+if mt.getreply(conn) ~= SMFIR_REJECT then
         error("mt.mailfrom() unexpected reply")
 end
 
-print ("received SMFIR_REPLYCODE ") 
+print ("received SMFIR_REJECT ") 
