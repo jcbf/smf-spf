@@ -28,8 +28,12 @@ smf-spf: smf-spf.o
 smf-spf.o: smf-spf.c
 	$(CC) $(CFLAGS) -c smf-spf.c
 
+coverage:
+	$(CC) $(CFLAGS) -c smf-spf.c -coverage
+	$(CC) -o smf-spf smf-spf.o $(LDFLAGS)  -lgcov
+	strip smf-spf
 clean:
-	rm -f smf-spf.o smf-spf
+	rm -f smf-spf.o smf-spf smf.spf.gcno sample coverage.info smf-spf.gcno
 
 install:
 	@./install.sh
