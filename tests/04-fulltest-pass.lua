@@ -31,14 +31,14 @@ if mt.getreply(conn) ~= SMFIR_CONTINUE then
 end
 
 mt.macro(conn, SMFIC_RCPT, "i", "t-verify-malformed")
-if mt.rcptto(conn, "user@example.com") ~= nil then
+if mt.rcptto(conn, "<user@example.com>") ~= nil then
 	error("mt.rcptto() failed")
 end
 if mt.getreply(conn) ~= SMFIR_CONTINUE then
 	error("mt.rcptto() unexpected reply")
 end
 mt.macro(conn, SMFIC_RCPT, "i", "t-verify-malformed")
-if mt.rcptto(conn, "user@example.net") ~= nil then
+if mt.rcptto(conn, "<user@example.net>") ~= nil then
 	error("mt.rcptto() failed")
 end
 if mt.getreply(conn) ~= SMFIR_CONTINUE then
