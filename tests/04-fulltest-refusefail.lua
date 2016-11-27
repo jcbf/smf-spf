@@ -2,7 +2,7 @@
 mt.echo("SPF pass  test")
 
 -- try to start the filter
-mt.startfilter("./smf-spf", "-f", "-c","./smf-spf-tests.conf")
+mt.startfilter("./smf-spf", "-f", "-c","./smf-spf-tests-refuse.conf")
 
 -- try to connect to it
 conn = mt.connect("inet:2424@127.0.0.1", 40, 0.25)
