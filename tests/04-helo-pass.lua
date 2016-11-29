@@ -1,5 +1,5 @@
 -- Copyright (c) 2009-2013, The Trusted Domain Project.  All rights reserved.
-mt.echo("SPF softfail  test")
+mt.echo("SPF helo pass test")
 
 -- try to start the filter
 mt.startfilter("./smf-spf", "-f", "-c","./smf-spf-tests.conf")
@@ -13,17 +13,24 @@ end
 -- send connection information
 -- mt.negotiate() is called implicitly
 mt.macro(conn, SMFIC_CONNECT, "j", "mta.name.local")
-if mt.conninfo(conn, "localhost", "195.22.26.194") ~= nil then
+if mt.conninfo(conn, "helo.underspell.com","10.11.12.13") ~= nil then
 	error("mt.conninfo() failed")
 end
 if mt.getreply(conn) ~= SMFIR_CONTINUE then
 	error("mt.conninfo() unexpected reply")
 end
 
+if mt.helo(conn, "helo.underspell.com") ~= nil then
+	error("mt.helo() failed")
+end
+if mt.getreply(conn) ~= SMFIR_CONTINUE then
+	error("mt.helo() unexpected reply")
+end
+
 -- send envelope macros and sender data
 -- mt.helo() is called implicitly
-mt.macro(conn, SMFIC_MAIL, "i", "t-verify-softfail")
-if mt.mailfrom(conn, "<user@softfail.underspell.com>") ~= nil then
+mt.macro(conn, SMFIC_MAIL, "i", "t-empty-sender")
+if mt.mailfrom(conn, "<>") ~= nil then
 	error("mt.mailfrom() failed")
 end
 if mt.getreply(conn) ~= SMFIR_CONTINUE then
@@ -60,14 +67,12 @@ end
 if mt.eom_check(conn, MT_HDRINSERT, "Authentication-Results") or
    mt.eom_check(conn, MT_HDRADD, "Authentication-Results") then
 	ar = mt.getheader(conn, "Authentication-Results", 0)
-	if string.find(ar, "spf=none", 1, true) == nil then
-		mt.echo ("Got header Authentication-Results: " .. ar)
+	if string.find(ar, "spf=pass", 1, true) == nil then
 		error("incorrect Authentication-Results field")
 	else
-		mt.echo("SPF softfail ")
+		mt.echo("SPF pass ")
 	end
 else
-	mt.echo ("Got header Authentication-Results: " .. ar)
 	error("missing Authentication-Results field")
 end
 
