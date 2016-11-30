@@ -1,3 +1,5 @@
+VERSION ?= 2.3
+
 CC = gcc
 PREFIX = /usr/local
 SBINDIR = $(PREFIX)/sbin
@@ -51,3 +53,55 @@ install:
 	cp -p smf-spf.conf $(CONFDIR)/smf-spf.conf.new; \
 	fi
 	@echo Please, inspect and edit the $(CONFDIR)/smf-spf.conf file.
+
+
+
+
+#
+# Making Docker stuff.
+#
+
+DOCKER_IMAGE_NAME := smf-spf/smf-spf
+DOCKER_TAGS := $(VERSION),latest
+
+
+# Helper definitions
+comma := ,
+empty :=
+space := $(empty) $(empty)
+eq = $(if $(or $(1),$(2)),$(and $(findstring $(1),$(2)),\
+                                $(findstring $(2),$(1))),1)
+
+
+
+# Build Docker image.
+#
+# Usage:
+#	make docker-image [no-cache=(yes|no)] [VERSION=]
+
+no-cache ?= no
+no-cache-arg = $(if $(call eq, $(no-cache), yes), --no-cache, $(empty))
+
+docker-image:
+	docker build -t $(DOCKER_IMAGE_NAME):$(VERSION) ./
+
+
+
+# Tag Docker image with given tags.
+#
+# Usage:
+#	make docker-tags [VERSION=] [DOCKER_TAGS=t1,t2,...]
+
+tags:
+	$(foreach tag, $(subst $(comma), $(space), $(DOCKER_TAGS)), \
+		docker tag $(DOCKER_IMAGE_NAME):$(VERSION) $(IMAGE_NAME):$(tag) ;)
+
+
+# Manually push Docker images to Docker Hub.
+#
+# Usage:
+#	make docker-push [DOCKER_TAGS=t1,t2,...]
+
+docker-push:
+	$(foreach tag, $(subst $(comma), $(space), $(DOCKER_TAGS)), \
+		docker push $(DOCKER_IMAGE_NAME):$(tag) ;)
