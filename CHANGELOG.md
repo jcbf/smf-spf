@@ -2,7 +2,21 @@
 
 ## [Unreleased](https://github.com/jcbf/smf-spf/tree/HEAD)
 
-[Full Changelog](https://github.com/jcbf/smf-spf/compare/v2.1.1...HEAD)
+[Full Changelog](https://github.com/jcbf/smf-spf/compare/v2.2...HEAD)
+
+**Implemented enhancements:**
+
+- Create a test suite [\#17](https://github.com/jcbf/smf-spf/issues/17)
+- Add debug output to test script [\#24](https://github.com/jcbf/smf-spf/pull/24) ([jcbf](https://github.com/jcbf))
+
+**Merged pull requests:**
+
+- Enable tests [\#26](https://github.com/jcbf/smf-spf/pull/26) ([jcbf](https://github.com/jcbf))
+- Add coverralls badge [\#25](https://github.com/jcbf/smf-spf/pull/25) ([jcbf](https://github.com/jcbf))
+- Enable tests and coverage [\#22](https://github.com/jcbf/smf-spf/pull/22) ([jcbf](https://github.com/jcbf))
+
+## [v2.2](https://github.com/jcbf/smf-spf/tree/v2.2) (2016-11-03)
+[Full Changelog](https://github.com/jcbf/smf-spf/compare/v2.1.1...v2.2)
 
 **Fixed bugs:**
 
