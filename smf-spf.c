@@ -55,6 +55,7 @@
 #define ACCEPT_PERMERR		1
 #define TAG_SUBJECT		1
 #define ADD_HEADER		1
+#define ADD_RECV_HEADER		0
 #define QUARANTINE		0
 #define DAEMONIZE		1
 #define VERSION			"2.3.0"
@@ -136,6 +137,7 @@ typedef struct config {
     int accept_temperror;
     int tag_subject;
     int add_header;
+    int add_recv_spf_header;
     int quarantine;
     int syslog_facility;
     int daemonize;
@@ -374,6 +376,7 @@ static int load_config(void) {
     conf.accept_temperror = ACCEPT_PERMERR;
     conf.tag_subject = TAG_SUBJECT;
     conf.add_header = ADD_HEADER;
+    conf.add_recv_spf_header = ADD_RECV_HEADER;
     conf.quarantine = QUARANTINE;
     conf.spf_ttl = SPF_TTL;
     conf.daemonize = DAEMONIZE;
@@ -481,6 +484,10 @@ static int load_config(void) {
 	}
 	if (!strcasecmp(key, "addheader") && !strcasecmp(val, "off")) {
 	    conf.add_header = 0;
+	    continue;
+	}
+	if (!strcasecmp(key, "addreceivedheader") && !strcasecmp(val, "on")) {
+	    conf.add_recv_spf_header = 1;
 	    continue;
 	}
 	if (!strcasecmp(key, "quarantine") && !strcasecmp(val, "on")) {
@@ -885,6 +892,39 @@ static sfsistat smf_eom(SMFICTX *ctx) {
 		    break;
 	    }
 	    smfi_insheader(ctx, 1, "Authentication-Results", spf_hdr);
+	    free(spf_hdr);
+	}
+    }
+
+
+    if (conf.add_recv_spf_header) {
+	char *spf_hdr = NULL;
+
+	if ((spf_hdr = calloc(1, 512))) {
+	    switch (context->status) {
+		case SPF_RESULT_PASS:
+		    snprintf(spf_hdr, 512, "Pass (%s: domain of %s\n\tdesignates %s as permitted sender)\n\treceiver=%s; client-ip=%s;\n\tenvelope-from=%s; helo=%s;",
+			context->site, context->sender, context->addr, context->site, context->addr, context->from, context->helo);
+		    break;
+		case SPF_RESULT_FAIL:
+		    snprintf(spf_hdr, 512, "Fail (%s: domain of %s\n\tdoes not designate %s as permitted sender)\n\treceiver=%s; client-ip=%s;\n\tenvelope-from=%s; helo=%s;",
+			context->site, context->sender, context->addr, context->site, context->addr, context->from, context->helo);
+		    break;
+		case SPF_RESULT_SOFTFAIL:
+		    snprintf(spf_hdr, 512, "SoftFail (%s: transitioning domain of %s\n\tdoes not designate %s as permitted sender)\n\treceiver=%s; client-ip=%s;\n\tenvelope-from=%s; helo=%s;",
+			context->site, context->sender, context->addr, context->site, context->addr, context->from, context->helo);
+		    break;
+		case SPF_RESULT_NEUTRAL:
+		    snprintf(spf_hdr, 512, "Neutral (%s: %s is neither permitted\n\tnor denied by domain of %s)\n\treceiver=%s; client-ip=%s;\n\tenvelope-from=%s; helo=%s;",
+			context->site, context->addr, context->sender, context->site, context->addr, context->from, context->helo);
+		    break;
+		case SPF_RESULT_NONE:
+		default:
+		    snprintf(spf_hdr, 512, "None (%s: domain of %s\n\tdoes not designate permitted sender hosts)\n\treceiver=%s; client-ip=%s;\n\tenvelope-from=%s; helo=%s;",
+			context->site, context->sender, context->site, context->addr, context->from, context->helo);
+		    break;
+	    }
+	    smfi_addheader(ctx, "Received-SPF", spf_hdr);
 	    free(spf_hdr);
 	}
     }
