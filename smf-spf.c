@@ -801,7 +801,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	if (spf_request) SPF_request_free(spf_request);
 	if (spf_server) SPF_server_free(spf_server);
 	smfi_setreply(ctx, "451" , "4.4.3", reject);
-	return SMFIS_REJECT;
+	return SMFIS_TEMPFAIL;
     }
     if (status == SPF_RESULT_FAIL && conf.refuse_fail && !conf.tos) {
 	char reject[2 * MAXLINE];
