@@ -840,7 +840,7 @@ static sfsistat smf_envrcpt(SMFICTX *ctx, char **args) {
     }
     if (conf.tos) {
 	strtolower(context->recipient);
-	if (to_check(context->recipient)) return SMFIS_CONTINUE;
+	if (to_check(context->recipient)) return SMFIS_ACCEPT;
 	if (context->status == SPF_RESULT_FAIL && conf.refuse_fail) {
 	    char reject[2 * MAXLINE];
 
