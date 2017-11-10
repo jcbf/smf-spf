@@ -1054,19 +1054,19 @@ int main(int argc, char **argv) {
         syslog(LOG_INFO, "running as uid: %i, gid: %i", (int) pw->pw_uid, (int) pw->pw_gid);
     }
     if (smfi_setconn((char *)conf.sendmail_socket) != MI_SUCCESS) {
-	fprintf(stderr, "smfi_setconn failed: %s\n", conf.sendmail_socket);
+	fprintf(stderr, "smfi_setconn failed: %s\n", conf.sendmail_socket); // LCOV_EXCL_LINE
 	goto done;
     }
     if (smfi_register(smfilter) != MI_SUCCESS) {
-	fprintf(stderr, "smfi_register failed\n");
+	fprintf(stderr, "smfi_register failed\n"); // LCOV_EXCL_LINE
 	goto done;
     }
     if (!foreground && conf.daemonize && daemon(0, 0)) {
-	fprintf(stderr, "daemonize failed: %s\n", strerror(errno));
+	fprintf(stderr, "daemonize failed: %s\n", strerror(errno)); // LCOV_EXCL_LINE
 	goto done;
     }
     if (pthread_mutex_init(&cache_mutex, 0)) {
-	fprintf(stderr, "pthread_mutex_init failed\n");
+	fprintf(stderr, "pthread_mutex_init failed\n"); // LCOV_EXCL_LINE
 	goto done;
     }
     umask(0177);
