@@ -5,7 +5,7 @@ mt.echo("SPF fail  test")
 mt.startfilter("./smf-spf", "-f", "-c","./smf-spf-tests-q.conf")
 
 -- try to connect to it
-conn = mt.connect("inet:2424@127.0.0.1", 40, 0.25)
+conn = mt.connect("unix:./milter.sock", 40, 0.25)
 if conn == nil then
 	error("mt.connect() failed")
 end
