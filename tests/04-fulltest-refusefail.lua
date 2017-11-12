@@ -27,7 +27,7 @@ if mt.mailfrom(conn, "<user@underspell.com>") ~= nil then
 	error("mt.mailfrom() failed")
 end
 
-if mt.getreply(conn) ~= SMFIR_REPLYCODE then
+if mt.getreply(conn) ~= SMFIR_CONTINUE then
 	        error("mt.mailfrom() unexpected reply")
 end
 

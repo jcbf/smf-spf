@@ -22,8 +22,8 @@ mt.macro(conn, SMFIC_MAIL, "i", "DEADBEAF")
 if mt.mailfrom(conn, "underspell.com") ~= nil then
         error("mt.mailfrom() failed")
 end
-if mt.getreply(conn) ~= SMFIR_REJECT then
+if mt.getreply(conn) ~= SMFIR_REPLYCODE then
         error("mt.mailfrom() unexpected reply")
 end
 
-print ("received SMFIR_REJECT ") 
+print ("received SMFIR_REPLYCODE ") 

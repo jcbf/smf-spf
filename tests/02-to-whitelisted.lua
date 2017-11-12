@@ -1,4 +1,4 @@
-mt.echo("Invalid recipient")
+mt.echo("Ip address whitelisted")
 
 -- try to start the filter
 mt.startfilter("./smf-spf", "-f", "-c","./smf-spf-tests.conf")
@@ -12,25 +12,29 @@ end
 -- send connection information
 
 mt.macro(conn, SMFIC_CONNECT, "j", "mta.name.local")
-if mt.conninfo(conn, "a.server.name.local", "10.11.12.13") ~= nil then
+if mt.conninfo(conn, "a.server.name.local", "10.0.0.1") ~= nil then
 	error("mt.conninfo() failed")
 end
 
--- send envelope macros and sender data
--- mt.helo() is called implicitly
+if mt.getreply(conn) ~= SMFIR_CONTINUE then
+        error("mt.conninfo() unexpected reply")
+end
+
+
 mt.macro(conn, SMFIC_MAIL, "i", "t-verify-malformed")
-if mt.mailfrom(conn, "<user@underspell.com>") ~= nil then
+if mt.mailfrom(conn, "<something@underspell.com>") ~= nil then
         error("mt.mailfrom() failed")
 end
 if mt.getreply(conn) ~= SMFIR_CONTINUE then
         error("mt.mailfrom() unexpected reply")
 end
+
 mt.macro(conn, SMFIC_RCPT, "i", "t-verify-malformed")
-if mt.rcptto(conn, "user@underspell.com") ~= nil then
+if mt.rcptto(conn, "<spamlover@example.com>") ~= nil then
         error("mt.mailfrom() failed")
 end
-if mt.getreply(conn) ~= SMFIR_REPLYCODE then
+if mt.getreply(conn) ~= SMFIR_ACCEPT then
         error("mt.mailfrom() unexpected reply")
 end
 
-print ("received SMFIR_REPLYCODE ") 
+print ("Received SMFIR_ACCEPT");
