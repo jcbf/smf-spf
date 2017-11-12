@@ -583,6 +583,7 @@ static int to_check(const char *to) {
     return 0;
 }
 
+// LCOV_EXCL_START
 static void die(const char *reason) {
 
     syslog(LOG_ERR, "[ERROR] die: %s", reason);
@@ -590,6 +591,7 @@ static void die(const char *reason) {
     sleep(60);
     abort();
 }
+// LCOV_EXCL_STOP
 
 static void mutex_lock(pthread_mutex_t *mutex) {
 
@@ -757,8 +759,8 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	}
     }
     if (!(spf_server = SPF_server_new(SPF_DNS_RESOLV, 0))) {
-	syslog(LOG_ERR, "[ERROR] SPF engine init failed");
-	return SMFIS_ACCEPT;
+	syslog(LOG_ERR, "[ERROR] SPF engine init failed"); // LCOV_EXCL_LINE
+	return SMFIS_ACCEPT; // LCOV_EXCL_LINE
     }
     SPF_server_set_rec_dom(spf_server, context->site);
     if (!(spf_request = SPF_request_new(spf_server))) goto done;
