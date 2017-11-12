@@ -35,7 +35,7 @@ coverage:
 	$(CC) -o smf-spf smf-spf.o $(LDFLAGS)  -lgcov
 	strip smf-spf
 clean:
-	rm -f smf-spf.o smf-spf smf.spf.gcno sample coverage.info smf-spf.gcno
+	rm -f smf-spf.o smf-spf smf.spf.gcno sample coverage.info smf-spf.gc*
 
 install:
 	@./install.sh
