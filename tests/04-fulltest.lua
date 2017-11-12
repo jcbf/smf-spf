@@ -30,8 +30,11 @@ if mt.getreply(conn) ~= SMFIR_CONTINUE then
 	error("mt.mailfrom() unexpected reply")
 end
 
+mt.macro(conn, SMFIC_RCPT, "i", "t-verify-malformed")
+if mt.rcptto(conn, "<yada@bla.example.com>") ~= nil then
+        error("mt.mailfrom() failed")
+end
 -- send headers
--- mt.rcptto() is called implicitly
 if mt.header(conn, "From", "user") ~= nil then
 	error("mt.header(From) failed")
 end

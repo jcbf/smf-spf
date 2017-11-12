@@ -50,12 +50,12 @@ end
 if mt.getreply(conn) ~= SMFIR_CONTINUE then
 	error("mt.header(Date) unexpected reply")
 end
-if mt.header(conn, "Subject", "Signing test") ~= nil then
-	error("mt.header(Subject) failed")
-end
-if mt.getreply(conn) ~= SMFIR_CONTINUE then
-	error("mt.header(Subject) unexpected reply")
-end
+-- if mt.header(conn, "Subject", "Signing test") ~= nil then
+-- 	error("mt.header(Subject) failed")
+-- end
+-- if mt.getreply(conn) ~= SMFIR_CONTINUE then
+-- 	error("mt.header(Subject) unexpected reply")
+-- end
 
 -- end of message; let the filter react
 if mt.eom(conn) ~= nil then
@@ -63,17 +63,18 @@ if mt.eom(conn) ~= nil then
 end
 
 -- verify that the right Authentication-Results header field got added
-if mt.eom_check(conn, MT_HDRINSERT, "Authentication-Results") or
-   mt.eom_check(conn, MT_HDRADD, "Authentication-Results") then
-	ar = mt.getheader(conn, "Authentication-Results", 0)
-	if string.find(ar, "spf=fail", 1, true) == nil then
-		error("incorrect Authentication-Results field")
+if mt.eom_check(conn, MT_HDRCHANGE, "Subject") or
+   mt.eom_check(conn, MT_HDRADD, "Subject") or
+   mt.eom_check(conn, MT_HDRINSERT, "Subject") then
+	subject = mt.getheader(conn, "Subject", 0)
+	if subject ~= nil and 
+		string.find(subject, "SPF:fail", 1, true) == nil then
+		error("incorrect Subject")
 	else
-		mt.echo("SPF failed as expected")
+		mt.echo("Fail to find subject tag")
 	end
 else
-        mt.echo ("Got header Authentication-Results: " .. ar)
-	error("missing Authentication-Results field")
+	error("missing Subject")
 end
 
 mt.disconnect(conn)
