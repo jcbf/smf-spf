@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./msf-spf -h
+./smf-spf -h
 for testfile in tests/* ; do
 	echo "#########################################"
 	echo "Running $testfile ..."
