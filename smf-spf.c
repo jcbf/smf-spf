@@ -642,8 +642,8 @@ static sfsistat smf_connect(SMFICTX *ctx, char *name, _SOCK_ADDR *sa) {
             return SMFIS_ACCEPT;
         }
         if ((authserv_id = strdup(p)) == NULL) {
-            syslog(LOG_ERR, "[ERROR] can't save MTA-name");
-            return SMFIS_ACCEPT;
+            syslog(LOG_ERR, "[ERROR] can't save MTA-name"); // LCOV_EXCL_LINE
+            return SMFIS_ACCEPT; // LCOV_EXCL_LINE
         }
     }
 
@@ -671,8 +671,8 @@ static sfsistat smf_connect(SMFICTX *ctx, char *name, _SOCK_ADDR *sa) {
     if (conf.cidrs && ip_check(inet_addr(host))) return SMFIS_ACCEPT;
     if (conf.ptrs && ptr_check(name)) return SMFIS_ACCEPT;
     if (!(context = calloc(1, sizeof(*context)))) {
-	syslog(LOG_ERR, "[ERROR] %s", strerror(errno));
-	return SMFIS_ACCEPT;
+			syslog(LOG_ERR, "[ERROR] %s", strerror(errno)); // LCOV_EXCL_LINE
+			return SMFIS_ACCEPT; // LCOV_EXCL_LINE
     }
     smfi_setpriv(ctx, context);
     strscpy(context->addr, host, sizeof(context->addr) - 1);
