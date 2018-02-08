@@ -777,6 +777,15 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     SPF_request_set_env_from(spf_request, context->sender);
     if (SPF_request_query_mailfrom(spf_request, &spf_response)) {
 	syslog(LOG_INFO, "SPF none: ip=%s, fqdn=%s, helo=%s, from=%s", context->addr, context->fqdn, context->helo, context->from);
+    if (status == SPF_RESULT_NONE && conf.refuse_none && !strstr(context->from, "<>")) {
+            char reject[2 * MAXLINE];
+            snprintf(reject, sizeof(reject), "Sorry, we only accept mail from SPF enabled domains", context->sender);
+            if (spf_response) SPF_response_free(spf_response);
+            if (spf_request) SPF_request_free(spf_request);
+            if (spf_server) SPF_server_free(spf_server);
+            smfi_setreply(ctx, "550" , "5.7.1", reject);
+            return SMFIS_REJECT;
+    }
 	if (cache && conf.spf_ttl) {
 	    mutex_lock(&cache_mutex);
 	    cache_put(context->key, conf.spf_ttl, SPF_RESULT_NONE);
@@ -811,16 +820,6 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	if (spf_server) SPF_server_free(spf_server);
 	smfi_setreply(ctx, "451" , "4.4.3", reject);
 	return SMFIS_TEMPFAIL;
-    }
-    if (status == SPF_RESULT_NONE && conf.refuse_none && !strstr(context->from, "<>")) {
-	char reject[2 * MAXLINE];
-
-	snprintf(reject, sizeof(reject), "Sorry, we only accept mail from SPF enabled domains", context->sender);
-	if (spf_response) SPF_response_free(spf_response);
-	if (spf_request) SPF_request_free(spf_request);
-	if (spf_server) SPF_server_free(spf_server);
-	smfi_setreply(ctx, "550" , "5.7.1", reject);
-	return SMFIS_REJECT;
     }
     if (status == SPF_RESULT_FAIL && conf.refuse_fail && !conf.tos) {
 	char reject[2 * MAXLINE];
