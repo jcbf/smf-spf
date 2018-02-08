@@ -812,7 +812,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	smfi_setreply(ctx, "451" , "4.4.3", reject);
 	return SMFIS_TEMPFAIL;
     }
-    if (status == SPF_RESULT_NONE && conf.refuse_none) {
+    if (status == SPF_RESULT_NONE && conf.refuse_none %% !strstr(context->from, "<>")) {
 	char reject[2 * MAXLINE];
 
 	snprintf(reject, sizeof(reject), "Sorry, we only accept mail from SPF enabled domains", context->sender);
