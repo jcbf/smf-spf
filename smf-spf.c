@@ -51,6 +51,7 @@
 #define SYSLOG_FACILITY		LOG_MAIL
 #define SPF_TTL			3600
 #define REFUSE_FAIL		1
+#define REFUSE_NONE		0
 #define SOFT_FAIL		0
 #define ACCEPT_PERMERR		1
 #define TAG_SUBJECT		1
@@ -133,6 +134,7 @@ typedef struct config {
     STR *froms;
     STR *tos;
     int refuse_fail;
+    int refuse_none;
     int soft_fail;
     int accept_temperror;
     int tag_subject;
@@ -372,6 +374,7 @@ static int load_config(void) {
     conf.sendmail_socket = strdup(OCONN);
     conf.syslog_facility = SYSLOG_FACILITY;
     conf.refuse_fail = REFUSE_FAIL;
+    conf.refuse_none = REFUSE_NONE;
     conf.soft_fail = SOFT_FAIL;
     conf.accept_temperror = ACCEPT_PERMERR;
     conf.tag_subject = TAG_SUBJECT;
@@ -467,6 +470,10 @@ static int load_config(void) {
 	}
 	if (!strcasecmp(key, "softfail") && !strcasecmp(val, "on")) {
 	    conf.soft_fail = 1;
+	    continue;
+	}
+	if (!strcasecmp(key, "refusespfnone") && !strcasecmp(val, "on")) {
+	    conf.refuse_none = 1;
 	    continue;
 	}
 	if (!strcasecmp(key, "refusefail") && !strcasecmp(val, "off")) {
@@ -804,6 +811,16 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	if (spf_server) SPF_server_free(spf_server);
 	smfi_setreply(ctx, "451" , "4.4.3", reject);
 	return SMFIS_TEMPFAIL;
+    }
+    if (status == SPF_RESULT_NONE && conf.refuse_none) {
+	char reject[2 * MAXLINE];
+
+	snprintf(reject, sizeof(reject), "Sorry, we only accept mail from SPF enabled domains", context->sender);
+	if (spf_response) SPF_response_free(spf_response);
+	if (spf_request) SPF_request_free(spf_request);
+	if (spf_server) SPF_server_free(spf_server);
+	smfi_setreply(ctx, "550" , "5.7.1", reject);
+	return SMFIS_REJECT;
     }
     if (status == SPF_RESULT_FAIL && conf.refuse_fail && !conf.tos) {
 	char reject[2 * MAXLINE];
