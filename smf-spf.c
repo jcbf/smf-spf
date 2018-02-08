@@ -58,7 +58,7 @@
 #define ADD_RECV_HEADER		0
 #define QUARANTINE		0
 #define DAEMONIZE		1
-#define VERSION			"2.3.1"
+#define VERSION			"2.4.0"
 
 #define MAXLINE			258
 #define HASH_POWER		16
