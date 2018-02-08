@@ -503,6 +503,10 @@ static int load_config(void) {
 	    conf.quarantine_box = strdup(val);
 	    continue;
 	}
+	if (!strcasecmp(key, "authservid")) {
+	    authserv_id = strdup(val);
+	    continue;
+	}
 	if (!strcasecmp(key, "ttl")) {
 	    conf.spf_ttl = translate(val);
 	    continue;
