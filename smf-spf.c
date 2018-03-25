@@ -52,6 +52,7 @@
 #define SPF_TTL			3600
 #define REFUSE_FAIL		1
 #define REFUSE_NONE		0
+#define REFUSE_NONE_HELO		0
 #define SOFT_FAIL		0
 #define ACCEPT_PERMERR		1
 #define TAG_SUBJECT		1
@@ -135,6 +136,7 @@ typedef struct config {
     STR *tos;
     int refuse_fail;
     int refuse_none;
+    int refuse_none_helo;
     int soft_fail;
     int accept_temperror;
     int tag_subject;
@@ -375,6 +377,7 @@ static int load_config(void) {
     conf.syslog_facility = SYSLOG_FACILITY;
     conf.refuse_fail = REFUSE_FAIL;
     conf.refuse_none = REFUSE_NONE;
+    conf.refuse_none_helo = REFUSE_NONE_HELO;
     conf.soft_fail = SOFT_FAIL;
     conf.accept_temperror = ACCEPT_PERMERR;
     conf.tag_subject = TAG_SUBJECT;
@@ -474,6 +477,10 @@ static int load_config(void) {
 	}
 	if (!strcasecmp(key, "refusespfnone") && !strcasecmp(val, "on")) {
 	    conf.refuse_none = 1;
+	    continue;
+	}
+	if (!strcasecmp(key, "refusespfnonehelo") && !strcasecmp(val, "on")) {
+	    conf.refuse_none_helo = 1;
 	    continue;
 	}
 	if (!strcasecmp(key, "refusefail") && !strcasecmp(val, "off")) {
@@ -780,15 +787,26 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     SPF_request_set_helo_dom(spf_request, context->helo);
     SPF_request_set_env_from(spf_request, context->sender);
     if (SPF_request_query_mailfrom(spf_request, &spf_response)) {
-	syslog(LOG_INFO, "SPF (%s): ip=%s, fqdn=%s, helo=%s, from=%s", SPF_strresult(status),context->addr, context->fqdn, context->helo, context->from);
-    if (status == SPF_RESULT_NONE && conf.refuse_none && !strstr(context->from, "<>")) {
-            char reject[2 * MAXLINE];
-            snprintf(reject, sizeof(reject), "Sorry, we only accept mail from SPF enabled domains", context->sender);
-            if (spf_response) SPF_response_free(spf_response);
-            if (spf_request) SPF_request_free(spf_request);
-            if (spf_server) SPF_server_free(spf_server);
-            smfi_setreply(ctx, "550" , "5.7.1", reject);
-            return SMFIS_REJECT;
+	syslog(LOG_INFO, "SPF none: ip=%s, fqdn=%s, helo=%s, from=%s", context->addr, context->fqdn, context->helo, context->from);
+    if ((status == SPF_RESULT_NONE) || (status == SPF_RESULT_INVALID)) {
+            if (conf.refuse_none && !strstr(context->from, "<>")) {
+                    char reject[2 * MAXLINE];
+                    snprintf(reject, sizeof(reject), "Sorry, we only accept mail from SPF enabled domains", context->sender);
+                    if (spf_response) SPF_response_free(spf_response);
+                    if (spf_request) SPF_request_free(spf_request);
+                    if (spf_server) SPF_server_free(spf_server);
+                    smfi_setreply(ctx, "550" , "5.7.1", reject);
+                    return SMFIS_REJECT;
+            }
+            if (conf.refuse_none_helo && strstr(context->from, "<>")) {
+                    char reject[2 * MAXLINE];
+                    snprintf(reject, sizeof(reject), "Sorry, we only accept empty senders from enabled servers (HELO identity)", context->sender);
+                    if (spf_response) SPF_response_free(spf_response);
+                    if (spf_request) SPF_request_free(spf_request);
+                    if (spf_server) SPF_server_free(spf_server);
+                    smfi_setreply(ctx, "550" , "5.7.1", reject);
+                    return SMFIS_REJECT;
+            }
     }
 	if (cache && conf.spf_ttl) {
 	    mutex_lock(&cache_mutex);
