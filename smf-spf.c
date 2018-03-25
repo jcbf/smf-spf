@@ -780,7 +780,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     SPF_request_set_helo_dom(spf_request, context->helo);
     SPF_request_set_env_from(spf_request, context->sender);
     if (SPF_request_query_mailfrom(spf_request, &spf_response)) {
-	syslog(LOG_INFO, "SPF none: ip=%s, fqdn=%s, helo=%s, from=%s", context->addr, context->fqdn, context->helo, context->from);
+	syslog(LOG_INFO, "SPF (%s): ip=%s, fqdn=%s, helo=%s, from=%s", SPF_strresult(status),context->addr, context->fqdn, context->helo, context->from);
     if (status == SPF_RESULT_NONE && conf.refuse_none && !strstr(context->from, "<>")) {
             char reject[2 * MAXLINE];
             snprintf(reject, sizeof(reject), "Sorry, we only accept mail from SPF enabled domains", context->sender);
