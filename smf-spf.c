@@ -63,6 +63,7 @@
 #define VERSION			"2.4.0"
 
 #define MAXLINE			258
+#define MAXLOCALPART	64
 #define HASH_POWER		16
 #define FACILITIES_AMOUNT	10
 #define IPV4_DOT_DECIMAL	"^[0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}$"
@@ -622,7 +623,7 @@ static void mutex_unlock(pthread_mutex_t *mutex) {
 }
 
 static int address_preparation(register char *dst, register const char *src) {
-    register const char *start = NULL, *stop = NULL;
+    register const char *start = NULL, *stop = NULL, *local = NULL;
     int tail;
 
     if (!(start = strchr(src, '<'))) return 0;
@@ -632,7 +633,8 @@ static int address_preparation(register char *dst, register const char *src) {
     tail = strlen(dst) - 1;
     if ((dst[0] >= 0x07 && dst[0] <= 0x0d) || dst[0] == 0x20) return 0;
     if ((dst[tail] >= 0x07 && dst[tail] <= 0x0d) || dst[tail] == 0x20) return 0;
-    if (!strchr(dst, '@')) return 0;
+    local = strchr(dst, '@');
+    if (!local || ((local - start) > MAXLOCALPART)) return 0;
     return 1;
 }
 
