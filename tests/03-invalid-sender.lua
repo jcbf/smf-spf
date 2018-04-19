@@ -25,5 +25,22 @@ end
 if mt.getreply(conn) ~= SMFIR_REPLYCODE then
         error("mt.mailfrom() unexpected reply")
 end
-
 print ("received SMFIR_REPLYCODE ") 
+
+if mt.mailfrom(conn, "<1234567890123456789012345678901234567890123456789012345678901234@underspell.com>") ~= nil then
+        error("mt.mailfrom() failed")
+end
+if mt.getreply(conn) ~= SMFIR_CONTINUE then
+        error("mt.mailfrom() unexpected reply")
+end
+print ("received SMFIR_CONTINUE ")
+
+
+if mt.mailfrom(conn, "<12345678901234567890123456789012345678901234567890123456789012345@underspell.com>") ~= nil then
+        error("mt.mailfrom() failed")
+end
+if mt.getreply(conn) ~= SMFIR_REPLYCODE then
+        error("mt.mailfrom() unexpected reply")
+end
+print ("received SMFIR_REPLYCODE ")
+
