@@ -633,7 +633,7 @@ static int address_preparation(register char *dst, register const char *src) {
     tail = strlen(dst) - 1;
     if ((dst[0] >= 0x07 && dst[0] <= 0x0d) || dst[0] == 0x20) return 0;
     if ((dst[tail] >= 0x07 && dst[tail] <= 0x0d) || dst[tail] == 0x20) return 0;
-    local = strchr(dst, '@');
+    local = strchr(start, '@');
     if (!local || ((local - start) > MAXLOCALPART)) return 0;
     return 1;
 }
