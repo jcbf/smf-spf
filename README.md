@@ -11,7 +11,20 @@ This was abandoned code and has several bugfixes and enhancements.
 
 # Change Log
 
-## [Unreleased Changes](https://github.com/jcbf/smf-spf/compare/v2.4.0...HEAD)
+-## [v2.4.1](https://github.com/jcbf/smf-spf/tree/v2.4.1) (2018-04-19)
+-[Full Changelog](https://github.com/jcbf/smf-spf/compare/v2.4.0...v2.4.1)
+
+**Implemented enhancements:**
+
+- Reject bounces when there is no SPF policy defined [\#46](https://github.com/jcbf/smf-spf/issues/46)
+- Reject messages with an empty sender [\#49](https://github.com/jcbf/smf-spf/pull/49) ([jcbf](https://github.com/jcbf))
+- Add SPF result on log [\#48](https://github.com/jcbf/smf-spf/pull/48) ([jcbf](https://github.com/jcbf))
+
+**Merged pull requests:**
+
+- Check for the localpart size. [\#51](https://github.com/jcbf/smf-spf/pull/51) ([jcbf](https://github.com/jcbf))
+
+## [Unreleased Changes](https://github.com/jcbf/smf-spf/compare/v2.4.1...HEAD)
 
 ## [v2.4.0](https://github.com/jcbf/smf-spf/tree/v2.4.0) (2018-02-08)
 [Full Changelog](https://github.com/jcbf/smf-spf/compare/v2.3.1...v2.4.0)
