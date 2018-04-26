@@ -7,12 +7,21 @@ smf-spf
 
 It's a lightweight, fast and reliable Sendmail milter that implements the Sender Policy Framework
 
-This was abandoned code and has several bugfixes and enhancements.
+This was abandoned code and has several bugfixes and enhancements. like:
+
+- Make MAIL and RCPT limits RFC 5321 compliant  ( both localpart and domain )
+- Reply codes aligned with RFC 7208
+- Daemonize option via command line 
+- Fix SPF_RESULT_TEMPERROR handling
+- fix segfault when server address is unknown 
+- Create a test suite and covergae tests
+- Configurable refuse when SPF is none
+- Reject NDR when there is no SPF policy defined 
 
 # Change Log
 
--## [v2.4.1](https://github.com/jcbf/smf-spf/tree/v2.4.1) (2018-04-19)
--[Full Changelog](https://github.com/jcbf/smf-spf/compare/v2.4.0...v2.4.1)
+## [v2.4.1](https://github.com/jcbf/smf-spf/tree/v2.4.1) (2018-04-19)
+[Full Changelog between 2.4.0 and 2.4.1](https://github.com/jcbf/smf-spf/compare/v2.4.0...v2.4.1)
 
 **Implemented enhancements:**
 
