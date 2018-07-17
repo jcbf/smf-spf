@@ -136,7 +136,7 @@ typedef struct config {
     STR *ptrs;
     STR *froms;
     STR *tos;
-    int relaxed_locapart
+    int relaxed_locapart;
     int refuse_fail;
     int refuse_none;
     int refuse_none_helo;
