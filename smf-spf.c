@@ -50,6 +50,7 @@
 #define QUARANTINE_BOX		"postmaster"
 #define SYSLOG_FACILITY		LOG_MAIL
 #define SPF_TTL			3600
+#define RELAXED_LOCALPART	0
 #define REFUSE_FAIL		1
 #define REFUSE_NONE		0
 #define REFUSE_NONE_HELO		0
@@ -135,6 +136,7 @@ typedef struct config {
     STR *ptrs;
     STR *froms;
     STR *tos;
+    int relaxed_locapart
     int refuse_fail;
     int refuse_none;
     int refuse_none_helo;
@@ -377,6 +379,7 @@ static int load_config(void) {
     conf.sendmail_socket = strdup(OCONN);
     conf.syslog_facility = SYSLOG_FACILITY;
     conf.refuse_fail = REFUSE_FAIL;
+    conf.relaxed_locapart = RELAXED_LOCALPART;
     conf.refuse_none = REFUSE_NONE;
     conf.refuse_none_helo = REFUSE_NONE_HELO;
     conf.soft_fail = SOFT_FAIL;
@@ -482,6 +485,10 @@ static int load_config(void) {
 	}
 	if (!strcasecmp(key, "refusespfnonehelo") && !strcasecmp(val, "on")) {
 	    conf.refuse_none_helo = 1;
+	    continue;
+	}
+	if (!strcasecmp(key, "relaxedlocalpart") && !strcasecmp(val, "on")) {
+	    conf.relaxed_locapart= 1;
 	    continue;
 	}
 	if (!strcasecmp(key, "refusefail") && !strcasecmp(val, "off")) {
@@ -634,7 +641,8 @@ static int address_preparation(register char *dst, register const char *src) {
     if ((dst[0] >= 0x07 && dst[0] <= 0x0d) || dst[0] == 0x20) return 0;
     if ((dst[tail] >= 0x07 && dst[tail] <= 0x0d) || dst[tail] == 0x20) return 0;
     local = strchr(start, '@');
-    if (!local || ((local - start) > MAXLOCALPART)) return 0;
+    if (!local) return 0;
+    if (!conf.relaxed_locapart && ((local - start) > MAXLOCALPART)) return 0;
     return 1;
 }
 
