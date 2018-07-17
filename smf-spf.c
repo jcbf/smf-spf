@@ -50,6 +50,7 @@
 #define QUARANTINE_BOX		"postmaster"
 #define SYSLOG_FACILITY		LOG_MAIL
 #define SPF_TTL			3600
+#define RELAXED_LOCALPART	0
 #define REFUSE_FAIL		1
 #define REFUSE_NONE		0
 #define REFUSE_NONE_HELO		0
@@ -135,6 +136,7 @@ typedef struct config {
     STR *ptrs;
     STR *froms;
     STR *tos;
+    int relaxed_locapart;
     int refuse_fail;
     int refuse_none;
     int refuse_none_helo;
@@ -377,6 +379,7 @@ static int load_config(void) {
     conf.sendmail_socket = strdup(OCONN);
     conf.syslog_facility = SYSLOG_FACILITY;
     conf.refuse_fail = REFUSE_FAIL;
+    conf.relaxed_locapart = RELAXED_LOCALPART;
     conf.refuse_none = REFUSE_NONE;
     conf.refuse_none_helo = REFUSE_NONE_HELO;
     conf.soft_fail = SOFT_FAIL;
@@ -482,6 +485,10 @@ static int load_config(void) {
 	}
 	if (!strcasecmp(key, "refusespfnonehelo") && !strcasecmp(val, "on")) {
 	    conf.refuse_none_helo = 1;
+	    continue;
+	}
+	if (!strcasecmp(key, "relaxedlocalpart") && !strcasecmp(val, "on")) {
+	    conf.relaxed_locapart= 1;
 	    continue;
 	}
 	if (!strcasecmp(key, "refusefail") && !strcasecmp(val, "off")) {
@@ -634,7 +641,8 @@ static int address_preparation(register char *dst, register const char *src) {
     if ((dst[0] >= 0x07 && dst[0] <= 0x0d) || dst[0] == 0x20) return 0;
     if ((dst[tail] >= 0x07 && dst[tail] <= 0x0d) || dst[tail] == 0x20) return 0;
     local = strchr(start, '@');
-    if (!local || ((local - start) > MAXLOCALPART)) return 0;
+    if (!local) return 0;
+    if (!conf.relaxed_locapart && ((local - start) > MAXLOCALPART)) return 0;
     return 1;
 }
 
@@ -793,7 +801,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     if ((status == SPF_RESULT_NONE) || (status == SPF_RESULT_INVALID)) {
             if (conf.refuse_none && !strstr(context->from, "<>")) {
                     char reject[2 * MAXLINE];
-                    snprintf(reject, sizeof(reject), "Sorry, we only accept mail from SPF enabled domains", context->sender);
+                    snprintf(reject, sizeof(reject), "Sorry %s, we only accept mail from SPF enabled domains.", context->sender);
                     if (spf_response) SPF_response_free(spf_response);
                     if (spf_request) SPF_request_free(spf_request);
                     if (spf_server) SPF_server_free(spf_server);
@@ -802,7 +810,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
             }
             if (conf.refuse_none_helo && strstr(context->from, "<>")) {
                     char reject[2 * MAXLINE];
-                    snprintf(reject, sizeof(reject), "Sorry, we only accept empty senders from enabled servers (HELO identity)", context->sender);
+                    snprintf(reject, sizeof(reject), "Sorry %s, we only accept empty senders from enabled servers (HELO identity)", context->sender);
                     if (spf_response) SPF_response_free(spf_response);
                     if (spf_request) SPF_request_free(spf_request);
                     if (spf_server) SPF_server_free(spf_server);
@@ -836,15 +844,18 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	    break;
     }
     if (status == SPF_RESULT_TEMPERROR && !conf.accept_temperror) {
-	char reject[2 * MAXLINE];
-
-	snprintf(reject, sizeof(reject), "Found a problem processing SFP for %s. Error: %s", context->sender,  SPF_strreason(spf_response->reason));
-	if (spf_response) SPF_response_free(spf_response);
-	if (spf_request) SPF_request_free(spf_request);
-	if (spf_server) SPF_server_free(spf_server);
-	smfi_setreply(ctx, "451" , "4.4.3", reject);
-	return SMFIS_TEMPFAIL;
-    }
+		char reject[2 * MAXLINE];
+		if (spf_response) {
+			snprintf(reject, sizeof(reject), "Found a problem processing SFP for %s. Error: (no reason)", context->sender);
+		} else {
+			snprintf(reject, sizeof(reject), "Found a problem processing SFP for %s. Error: %s", context->sender,  SPF_strreason(spf_response->reason));
+		}
+		if (spf_response) SPF_response_free(spf_response);
+		if (spf_request) SPF_request_free(spf_request);
+		if (spf_server) SPF_server_free(spf_server);
+		smfi_setreply(ctx, "451" , "4.4.3", reject);
+		return SMFIS_TEMPFAIL;
+	}
     if (status == SPF_RESULT_FAIL && conf.refuse_fail && !conf.tos) {
 	char reject[2 * MAXLINE];
 
