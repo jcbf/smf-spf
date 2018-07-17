@@ -793,7 +793,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     if ((status == SPF_RESULT_NONE) || (status == SPF_RESULT_INVALID)) {
             if (conf.refuse_none && !strstr(context->from, "<>")) {
                     char reject[2 * MAXLINE];
-                    snprintf(reject, sizeof(reject), "Sorry, we only accept mail from SPF enabled domains", context->sender);
+                    snprintf(reject, sizeof(reject), "Sorry %s, we only accept mail from SPF enabled domains.", context->sender);
                     if (spf_response) SPF_response_free(spf_response);
                     if (spf_request) SPF_request_free(spf_request);
                     if (spf_server) SPF_server_free(spf_server);
@@ -802,7 +802,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
             }
             if (conf.refuse_none_helo && strstr(context->from, "<>")) {
                     char reject[2 * MAXLINE];
-                    snprintf(reject, sizeof(reject), "Sorry, we only accept empty senders from enabled servers (HELO identity)", context->sender);
+                    snprintf(reject, sizeof(reject), "Sorry %s, we only accept empty senders from enabled servers (HELO identity)", context->sender);
                     if (spf_response) SPF_response_free(spf_response);
                     if (spf_request) SPF_request_free(spf_request);
                     if (spf_server) SPF_server_free(spf_server);
@@ -836,15 +836,18 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	    break;
     }
     if (status == SPF_RESULT_TEMPERROR && !conf.accept_temperror) {
-	char reject[2 * MAXLINE];
-
-	snprintf(reject, sizeof(reject), "Found a problem processing SFP for %s. Error: %s", context->sender,  SPF_strreason(spf_response->reason));
-	if (spf_response) SPF_response_free(spf_response);
-	if (spf_request) SPF_request_free(spf_request);
-	if (spf_server) SPF_server_free(spf_server);
-	smfi_setreply(ctx, "451" , "4.4.3", reject);
-	return SMFIS_TEMPFAIL;
-    }
+		char reject[2 * MAXLINE];
+		if (spf_response) {
+			snprintf(reject, sizeof(reject), "Found a problem processing SFP for %s. Error: (no reason)", context->sender);
+		} else {
+			snprintf(reject, sizeof(reject), "Found a problem processing SFP for %s. Error: %s", context->sender,  SPF_strreason(spf_response->reason));
+		}
+		if (spf_response) SPF_response_free(spf_response);
+		if (spf_request) SPF_request_free(spf_request);
+		if (spf_server) SPF_server_free(spf_server);
+		smfi_setreply(ctx, "451" , "4.4.3", reject);
+		return SMFIS_TEMPFAIL;
+	}
     if (status == SPF_RESULT_FAIL && conf.refuse_fail && !conf.tos) {
 	char reject[2 * MAXLINE];
 
