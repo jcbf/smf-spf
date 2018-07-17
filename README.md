@@ -21,6 +21,21 @@ This was abandoned code and has several bugfixes and enhancements. like:
 
 # Change Log
 
+## [v2.4.2](https://github.com/jcbf/smf-spf/tree/v2.4.2) (2018-07-18)
+[Full Changelog between 2.4.1 and 2.4.2](https://github.com/jcbf/smf-spf/compare/v2.4.1...v2.4.2)
+
+**Implemented enhancements:**
+
+- Fix codewarnings [\#54](https://github.com/jcbf/smf-spf/pull/54) ([jcbf](https://github.com/jcbf))
+- Only domain size is checked  [\#50](https://github.com/jcbf/smf-spf/issues/50)
+
+**Merged pull requests:**
+
+- Allow relaxed localpart size verification [\#53](https://github.com/jcbf/smf-spf/pull/53) ([jcbf](https://github.com/jcbf))
+
+## [Unreleased Changes](https://github.com/jcbf/smf-spf/compare/v2.4.2...HEAD)
+
+
 ## [v2.4.1](https://github.com/jcbf/smf-spf/tree/v2.4.1) (2018-04-19)
 [Full Changelog between 2.4.0 and 2.4.1](https://github.com/jcbf/smf-spf/compare/v2.4.0...v2.4.1)
 
@@ -33,8 +48,6 @@ This was abandoned code and has several bugfixes and enhancements. like:
 **Merged pull requests:**
 
 - Check for the localpart size. [\#51](https://github.com/jcbf/smf-spf/pull/51) ([jcbf](https://github.com/jcbf))
-
-## [Unreleased Changes](https://github.com/jcbf/smf-spf/compare/v2.4.1...HEAD)
 
 ## [v2.4.0](https://github.com/jcbf/smf-spf/tree/v2.4.0) (2018-02-08)
 [Full Changelog](https://github.com/jcbf/smf-spf/compare/v2.3.1...v2.4.0)
