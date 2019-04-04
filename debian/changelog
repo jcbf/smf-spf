@@ -1,0 +1,6 @@
+smf-spf (20190404.164231) jessie; urgency=medium
+
+  * Add debian packaging
+
+ -- Rick van de Loo <rick@byte.nl>  Thu, 04 Apr 2019 16:42:31 +0200
+

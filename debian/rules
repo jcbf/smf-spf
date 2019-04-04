@@ -1,0 +1,20 @@
+#!/usr/bin/make -f
+export DH_VERBOSE=1
+export DESTDIR=debian/smf-spf/
+export INSDIR=/usr/bin
+
+build:
+	make
+
+binary:
+	install -d -o root -m 0701 $(DESTDIR)$(INSDIR)
+	install -o root -m 0701 smf-spf $(DESTDIR)$(INSDIR)
+	dh_shlibdeps
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+%:
+	dh $@
+
