@@ -36,6 +36,28 @@ else
     esac
 fi
 
+#echo -e "\nInstalling service. Detected: "
+#
+#if [ -f "/lib/lsb/init-functions" ]; then
+#	echo "Debian"
+#elif [ -f "/etc/rc.subr" ]; then
+#	echo "FreeBSD"
+#	#Do FreeBDS stuff
+#elif [ -f "/etc/rc.d/init.d/functions" ]; then
+#	echo "RedHat"
+#	#Do RedHat stuff
+#else
+#	echo "Unsure - Install manually"
+#fi
+
+echo -e "Installing debian service"
+cp smf-spf.service /etc/systemd/system
+systemctl deamon-reload
+systemctl enable smf-spf
+systemctl start smf-spf
+echo -e "Debain service installed and started"
+
+
 if test ! -d $DATADIR; then
     mkdir -p -m 700 $DATADIR; \
     chown $USER:$GROUP $DATADIR; \
@@ -44,6 +66,7 @@ if test ! -d $CONFDIR; then
     mkdir -p -m 755 $CONFDIR;
 fi
 if test ! -f $CONFDIR/smf-spf.conf; then
-    touch $CONFDIR/smf-spf.conf;
+    #touch $CONFDIR/smf-spf.conf;
+    cp smf-spf.conf $CONFDIR/smf-spf.conf
 fi
 echo -e "\nPlease, edit the $CONFDIR/smf-spf.conf file."
