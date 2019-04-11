@@ -2,6 +2,7 @@
 export DH_VERBOSE=1
 export DESTDIR=debian/smf-spf/
 export INSDIR=/usr/bin
+export CONFDIR=/etc/
 
 build:
 	make
@@ -9,6 +10,7 @@ build:
 binary:
 	install -d -o root -m 0701 $(DESTDIR)$(INSDIR)
 	install -o root -m 0701 smf-spf $(DESTDIR)$(INSDIR)
+	cp smf-spf.conf $(DESTDIR)$(CONFDIR)smf-spf.conf
 	dh_shlibdeps
 	dh_installdeb
 	dh_gencontrol
