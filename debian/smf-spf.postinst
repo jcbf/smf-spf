@@ -51,7 +51,7 @@ fi
 #fi
 
 echo -e "Installing debian service"
-cp smf-spf.service /etc/systemd/system
+cp smf-spf/smf-spf.service /etc/systemd/system
 systemctl deamon-reload
 systemctl enable smf-spf
 systemctl start smf-spf
