@@ -1,11 +1,11 @@
 Source: smf-spf
 Priority: optional
 Section: misc
-Maintainer: Rick van de Loo <rick@byte.nl>
-Build-Depends: debhelper (>=9), libmilter-dev, libspf2-dev
+Maintainer: Deben Oldert <deben.oldert@byte.nl>
+Build-Depends: debhelper (>=9), dh-systemd (>= 1.5), libmilter-dev, libspf2-dev
 Standards-Version: 3.9.6
 
 Package: smf-spf
 Architecture: amd64
 Description: It's a lightweight, fast and reliable Sendmail milter that implements the Sender Policy Framework
-Depends: ${misc:Depends}, ${shlibs:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}, libmilter, libspf2-2

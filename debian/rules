@@ -1,8 +1,8 @@
 #!/usr/bin/make -f
 export DH_VERBOSE=1
-export DESTDIR=debian/smf-spf/
+export DESTDIR=debian/smf-spf
 export INSDIR=/usr/bin
-export CONFDIR=/etc/
+export CONFDIR=/etc
 
 build:
 	make
@@ -10,12 +10,13 @@ build:
 binary:
 	install -d -o root -m 0701 $(DESTDIR)$(INSDIR)
 	install -o root -m 0701 smf-spf $(DESTDIR)$(INSDIR)
-	cp smf-spf.conf $(DESTDIR)$(CONFDIR)smf-spf.conf
 	dh_shlibdeps
 	dh_installdeb
+	dh_systemd_enable
 	dh_gencontrol
 	dh_md5sums
 	dh_builddeb
+	dh_systemd_start
 
 %:
-	dh $@
+	dh $@ --with=systemd

@@ -1,0 +1,9 @@
+[Unit]
+Description=smf-spf | SPF milter for Sendmail and Postfix
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/smf-spf -c /etc/smf-spf.conf
+
+[Install]
+WantedBy=multi-user.target
