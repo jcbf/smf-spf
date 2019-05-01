@@ -55,13 +55,17 @@
 #define REFUSE_NONE		0
 #define REFUSE_NONE_HELO		0
 #define SOFT_FAIL		0
+#define REJECT_FAIL_BOUNCE		0
 #define ACCEPT_PERMERR		1
 #define TAG_SUBJECT		1
 #define ADD_HEADER		1
 #define ADD_RECV_HEADER		0
 #define QUARANTINE		0
 #define DAEMONIZE		1
-#define VERSION			"2.4.1"
+#define VERSION			"2.5.0"
+#define SPF_NONE		0
+#define SPF_HARD_REJECT		1
+#define SPF_SOFT_REJECT		2
 
 #define MAXLINE			258
 #define MAXLOCALPART	64
@@ -141,6 +145,7 @@ typedef struct config {
     int refuse_none;
     int refuse_none_helo;
     int soft_fail;
+    int reject_fail_bounce;
     int accept_temperror;
     int tag_subject;
     int add_header;
@@ -383,6 +388,7 @@ static int load_config(void) {
     conf.refuse_none = REFUSE_NONE;
     conf.refuse_none_helo = REFUSE_NONE_HELO;
     conf.soft_fail = SOFT_FAIL;
+    conf.reject_fail_bounce = SPF_NONE;
     conf.accept_temperror = ACCEPT_PERMERR;
     conf.tag_subject = TAG_SUBJECT;
     conf.add_header = ADD_HEADER;
@@ -473,6 +479,14 @@ static int load_config(void) {
 	}
 	if (!strcasecmp(key, "accepttemperror") && !strcasecmp(val, "off")) {
 	    conf.accept_temperror = 0;
+	    continue;
+	}
+	if (!strcasecmp(key, "rejectbounces") && !strcasecmp(val, "hard")) {
+	    conf.reject_fail_bounce = SPF_HARD_REJECT;
+	    continue;
+	}
+	if (!strcasecmp(key, "rejectbounces") && !strcasecmp(val, "soft")) {
+	    conf.reject_fail_bounce = SPF_SOFT_REJECT;
 	    continue;
 	}
 	if (!strcasecmp(key, "softfail") && !strcasecmp(val, "on")) {
@@ -864,6 +878,21 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	if (spf_request) SPF_request_free(spf_request);
 	if (spf_server) SPF_server_free(spf_server);
     if (conf.soft_fail) {
+            smfi_setreply(ctx, "450", "4.7.23", reject);
+            return SMFIS_TEMPFAIL;
+    } else {
+            smfi_setreply(ctx, "550", "5.7.23", reject);
+            return SMFIS_REJECT;
+    }
+    }
+    if (status == SPF_RESULT_FAIL && (conf.reject_fail_bounce && strstr(context->from, "<>"))) {
+	char reject[2 * MAXLINE];
+
+	snprintf(reject, sizeof(reject), "Rejected, look at http://www.openspf.org/why.html?sender=%s&ip=%s&receiver=%s", context->sender, context->addr, context->site);
+	if (spf_response) SPF_response_free(spf_response);
+	if (spf_request) SPF_request_free(spf_request);
+	if (spf_server) SPF_server_free(spf_server);
+    if (conf.reject_fail_bounce == SPF_SOFT_REJECT) {
             smfi_setreply(ctx, "450", "4.7.23", reject);
             return SMFIS_TEMPFAIL;
     } else {
