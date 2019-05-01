@@ -62,7 +62,7 @@
 #define ADD_RECV_HEADER		0
 #define QUARANTINE		0
 #define DAEMONIZE		1
-#define VERSION			"2.5.0"
+#define VERSION			"2.4.2"
 #define SPF_NONE		0
 #define SPF_HARD_REJECT		1
 #define SPF_SOFT_REJECT		2
