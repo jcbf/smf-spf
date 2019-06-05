@@ -51,6 +51,7 @@
 #define SYSLOG_FACILITY		LOG_MAIL
 #define SPF_TTL			3600
 #define RELAXED_LOCALPART	0
+#define BEST_GUESS		1
 #define REFUSE_FAIL		1
 #define REFUSE_NONE		0
 #define REFUSE_NONE_HELO		0
@@ -62,6 +63,8 @@
 #define QUARANTINE		0
 #define DAEMONIZE		1
 #define VERSION			"2.4.2"
+#define SPF_GUESS_RECORD "v=spf1 a/24 mx/24 ptr ?all"
+#define SPF_GUESS_TEXT " (SPF best guess)"
 
 #define MAXLINE			258
 #define MAXLOCALPART	64
@@ -137,6 +140,7 @@ typedef struct config {
     STR *froms;
     STR *tos;
     int relaxed_locapart;
+    int best_guess;
     int refuse_fail;
     int refuse_none;
     int refuse_none_helo;
@@ -167,6 +171,7 @@ struct context {
     char recipient[MAXLINE];
     char key[MAXLINE];
     char *subject;
+    int is_best_guess;
     STR *rcpts;
     SPF_result_t status;
 };
@@ -378,6 +383,7 @@ static int load_config(void) {
     conf.run_as_user = strdup(USER);
     conf.sendmail_socket = strdup(OCONN);
     conf.syslog_facility = SYSLOG_FACILITY;
+    conf.best_guess = BEST_GUESS;
     conf.refuse_fail = REFUSE_FAIL;
     conf.relaxed_locapart = RELAXED_LOCALPART;
     conf.refuse_none = REFUSE_NONE;
@@ -489,6 +495,10 @@ static int load_config(void) {
 	}
 	if (!strcasecmp(key, "relaxedlocalpart") && !strcasecmp(val, "on")) {
 	    conf.relaxed_locapart= 1;
+	    continue;
+	}
+	if (!strcasecmp(key, "spfbestguess") && !strcasecmp(val, "off")) {
+	    conf.best_guess = 0;
 	    continue;
 	}
 	if (!strcasecmp(key, "refusefail") && !strcasecmp(val, "off")) {
@@ -797,33 +807,41 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     SPF_request_set_helo_dom(spf_request, context->helo);
     SPF_request_set_env_from(spf_request, context->sender);
     if (SPF_request_query_mailfrom(spf_request, &spf_response)) {
-	syslog(LOG_INFO, "SPF none: ip=%s, fqdn=%s, helo=%s, from=%s", context->addr, context->fqdn, context->helo, context->from);
-    if ((status == SPF_RESULT_NONE) || (status == SPF_RESULT_INVALID)) {
-            if (conf.refuse_none && !strstr(context->from, "<>")) {
-                    char reject[2 * MAXLINE];
-                    snprintf(reject, sizeof(reject), "Sorry %s, we only accept mail from SPF enabled domains.", context->sender);
-                    if (spf_response) SPF_response_free(spf_response);
-                    if (spf_request) SPF_request_free(spf_request);
-                    if (spf_server) SPF_server_free(spf_server);
-                    smfi_setreply(ctx, "550" , "5.7.1", reject);
-                    return SMFIS_REJECT;
+            if (!spf_response) goto done;
+            status = SPF_response_result(spf_response);
+            if ((status == SPF_RESULT_NONE) && conf.best_guess) {
+                    if (!(SPF_request_query_fallback(spf_request, &spf_response,(char *)SPF_GUESS_RECORD)))
+                            goto done; 
+                    context->is_best_guess = 1;
+                    status = SPF_response_result(spf_response);
             }
-            if (conf.refuse_none_helo && strstr(context->from, "<>")) {
-                    char reject[2 * MAXLINE];
-                    snprintf(reject, sizeof(reject), "Sorry %s, we only accept empty senders from enabled servers (HELO identity)", context->sender);
-                    if (spf_response) SPF_response_free(spf_response);
-                    if (spf_request) SPF_request_free(spf_request);
-                    if (spf_server) SPF_server_free(spf_server);
-                    smfi_setreply(ctx, "550" , "5.7.1", reject);
-                    return SMFIS_REJECT;
+            if ((status == SPF_RESULT_NONE) || (status == SPF_RESULT_INVALID)) {
+                    syslog(LOG_INFO, "SPF none: ip=%s, fqdn=%s, helo=%s, from=%s", context->addr, context->fqdn, context->helo, context->from);
+                    if (conf.refuse_none && !strstr(context->from, "<>")) {
+                            char reject[2 * MAXLINE];
+                            snprintf(reject, sizeof(reject), "Sorry %s, we only accept mail from SPF enabled domains.", context->sender);
+                            if (spf_response) SPF_response_free(spf_response);
+                            if (spf_request) SPF_request_free(spf_request);
+                            if (spf_server) SPF_server_free(spf_server);
+                            smfi_setreply(ctx, "550" , "5.7.1", reject);
+                            return SMFIS_REJECT;
+                    }
+                    if (conf.refuse_none_helo && strstr(context->from, "<>")) {
+                            char reject[2 * MAXLINE];
+                            snprintf(reject, sizeof(reject), "Sorry %s, we only accept empty senders from enabled servers (HELO identity)", context->sender);
+                            if (spf_response) SPF_response_free(spf_response);
+                            if (spf_request) SPF_request_free(spf_request);
+                            if (spf_server) SPF_server_free(spf_server);
+                            smfi_setreply(ctx, "550" , "5.7.1", reject);
+                            return SMFIS_REJECT;
+                    }
             }
-    }
-	if (cache && conf.spf_ttl) {
-	    mutex_lock(&cache_mutex);
-	    cache_put(context->key, conf.spf_ttl, SPF_RESULT_NONE);
-	    mutex_unlock(&cache_mutex);
-	}
-	goto done;
+            if (cache && conf.spf_ttl) {
+                    mutex_lock(&cache_mutex);
+                    cache_put(context->key, conf.spf_ttl, SPF_RESULT_NONE);
+                    mutex_unlock(&cache_mutex);
+            }
+            goto done;
     }
     if (!spf_response) goto done;
     status = SPF_response_result(spf_response);
@@ -948,25 +966,25 @@ static sfsistat smf_eom(SMFICTX *ctx) {
 	if ((spf_hdr = calloc(1, 512))) {
 	    switch (context->status) {
 		case SPF_RESULT_PASS:
-		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
-			authserv_id, "pass", context->sender, context->helo);
+		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s%s",
+			authserv_id, "pass", context->sender, context->helo,context->is_best_guess?SPF_GUESS_TEXT:"");
 		    break;
 		case SPF_RESULT_FAIL:
-		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
-			authserv_id, "fail", context->sender, context->helo);
+		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s%s",
+			authserv_id, "fail", context->sender, context->helo,context->is_best_guess?SPF_GUESS_TEXT:"");
 		    break;
 		case SPF_RESULT_SOFTFAIL:
-		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
-			authserv_id, "softfail", context->sender, context->helo);
+		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s%s",
+			authserv_id, "softfail", context->sender, context->helo,context->is_best_guess?SPF_GUESS_TEXT:"");
 		    break;
 		case SPF_RESULT_NEUTRAL:
-		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
-			authserv_id, "neutral", context->sender, context->helo);
+		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s%s",
+			authserv_id, "neutral", context->sender, context->helo,context->is_best_guess?SPF_GUESS_TEXT:"");
 		    break;
 		case SPF_RESULT_NONE:
 		default:
-		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
-			authserv_id, "none", context->sender, context->helo);
+		    snprintf(spf_hdr, 512, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s%s",
+			authserv_id, "none", context->sender, context->helo,context->is_best_guess?SPF_GUESS_TEXT:"");
 		    break;
 	    }
 	    smfi_insheader(ctx, 1, "Authentication-Results", spf_hdr);
