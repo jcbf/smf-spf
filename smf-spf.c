@@ -61,7 +61,7 @@
 #define ADD_RECV_HEADER		0
 #define QUARANTINE		0
 #define DAEMONIZE		1
-#define VERSION			"2.4.2"
+#define VERSION			"2.4.3"
 
 #define MAXLINE			258
 #define MAXLOCALPART	64
@@ -1068,7 +1068,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Usage: smf-spf [-f] -c <config file>\n");
 		return 0;
 	    case 'f':
-		if (optarg) foreground = 1;
+		foreground = 1;
 		break;
 	    case 'c':
 		if (optarg) config_file = optarg;
