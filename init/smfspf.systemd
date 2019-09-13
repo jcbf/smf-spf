@@ -1,0 +1,16 @@
+[Unit]
+Description=A lightweight, fast and reliable Sendmail milter that implements the Sender Policy Framework
+
+[Service]
+Type=simple
+User=nobody
+PermissionsStartOnly=true
+ExecStartPre=/bin/mkdir -p /var/run/smf-spf
+ExecStartPre=/bin/chown nobody:nogroup /var/run/smf-spf
+ExecStart=/usr/sbin/smf-spf -f -c /etc/smf-spf.conf
+ExecStartPost=/bin/chmod 666 /var/run/smf-spf/smf-spf.sock
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
