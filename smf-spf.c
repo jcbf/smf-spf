@@ -149,6 +149,7 @@ typedef struct config {
     int syslog_facility;
     int daemonize;
     unsigned long spf_ttl;
+    char *fixed_ip;
 } config;
 
 typedef struct facilities {
@@ -328,6 +329,7 @@ static void free_config(void) {
     SAFE_FREE(conf.quarantine_box);
     SAFE_FREE(conf.run_as_user);
     SAFE_FREE(conf.sendmail_socket);
+    SAFE_FREE(conf.fixed_ip);
     if (conf.cidrs) {
 	CIDR *it = conf.cidrs, *it_next;
 
@@ -375,6 +377,7 @@ static int load_config(void) {
 
     conf.tag = strdup(TAG_STRING);
     conf.quarantine_box = strdup(QUARANTINE_BOX);
+    conf.fixed_ip = NULL;
     conf.run_as_user = strdup(USER);
     conf.sendmail_socket = strdup(OCONN);
     conf.syslog_facility = SYSLOG_FACILITY;
@@ -518,6 +521,10 @@ static int load_config(void) {
 	}
 	if (!strcasecmp(key, "daemonize") && !strcasecmp(val, "off")) {
 	    conf.daemonize = 0;
+	    continue;
+	}
+	if (!strcasecmp(key, "fixedclientip")) {
+	    conf.fixed_ip = strdup(val);
 	    continue;
 	}
 	if (!strcasecmp(key, "quarantinebox")) {
@@ -703,7 +710,10 @@ static sfsistat smf_connect(SMFICTX *ctx, char *name, _SOCK_ADDR *sa) {
 			return SMFIS_ACCEPT; // LCOV_EXCL_LINE
     }
     smfi_setpriv(ctx, context);
-    strscpy(context->addr, host, sizeof(context->addr) - 1);
+    if (conf.fixed_ip) 
+            strscpy(context->addr, host, sizeof(context->addr) - 1);
+    else
+            strscpy(context->addr, conf.fixed_ip, sizeof(context->addr) - 1);
     strscpy(context->fqdn, name, sizeof(context->fqdn) - 1);
     strscpy(context->helo, "undefined", sizeof(context->helo) - 1);
     return SMFIS_CONTINUE;
