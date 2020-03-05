@@ -136,7 +136,7 @@ typedef struct config {
     STR *ptrs;
     STR *froms;
     STR *tos;
-    int relaxed_locapart;
+    int relaxed_localpart;
     int refuse_fail;
     int refuse_none;
     int refuse_none_helo;
@@ -382,7 +382,7 @@ static int load_config(void) {
     conf.sendmail_socket = strdup(OCONN);
     conf.syslog_facility = SYSLOG_FACILITY;
     conf.refuse_fail = REFUSE_FAIL;
-    conf.relaxed_locapart = RELAXED_LOCALPART;
+    conf.relaxed_localpart = RELAXED_LOCALPART;
     conf.refuse_none = REFUSE_NONE;
     conf.refuse_none_helo = REFUSE_NONE_HELO;
     conf.soft_fail = SOFT_FAIL;
@@ -491,7 +491,7 @@ static int load_config(void) {
 	    continue;
 	}
 	if (!strcasecmp(key, "relaxedlocalpart") && !strcasecmp(val, "on")) {
-	    conf.relaxed_locapart= 1;
+	    conf.relaxed_localpart= 1;
 	    continue;
 	}
 	if (!strcasecmp(key, "refusefail") && !strcasecmp(val, "off")) {
@@ -649,7 +649,7 @@ static int address_preparation(register char *dst, register const char *src) {
     if ((dst[tail] >= 0x07 && dst[tail] <= 0x0d) || dst[tail] == 0x20) return 0;
     local = strchr(start, '@');
     if (!local) return 0;
-    if (!conf.relaxed_locapart && ((local - start) > MAXLOCALPART)) return 0;
+    if (!conf.relaxed_localpart && ((local - start) > MAXLOCALPART)) return 0;
     return 1;
 }
 
