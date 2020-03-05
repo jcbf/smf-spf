@@ -711,9 +711,9 @@ static sfsistat smf_connect(SMFICTX *ctx, char *name, _SOCK_ADDR *sa) {
     }
     smfi_setpriv(ctx, context);
     if (conf.fixed_ip) 
-            strscpy(context->addr, host, sizeof(context->addr) - 1);
-    else
             strscpy(context->addr, conf.fixed_ip, sizeof(context->addr) - 1);
+    else
+            strscpy(context->addr, host, sizeof(context->addr) - 1);
     strscpy(context->fqdn, name, sizeof(context->fqdn) - 1);
     strscpy(context->helo, "undefined", sizeof(context->helo) - 1);
     return SMFIS_CONTINUE;
