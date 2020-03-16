@@ -62,6 +62,7 @@
 #define QUARANTINE		0
 #define DAEMONIZE		1
 #define VERSION			"2.4.3"
+#define REJECT_REASON	"Rejected, look at http://www.openspf.org/why.html?sender=%s&ip=%s&receiver=%s"
 
 #define MAXLINE			258
 #define MAXLOCALPART	64
@@ -150,6 +151,7 @@ typedef struct config {
     int daemonize;
     unsigned long spf_ttl;
     char *fixed_ip;
+    char *reject_reason;
 } config;
 
 typedef struct facilities {
@@ -330,6 +332,7 @@ static void free_config(void) {
     SAFE_FREE(conf.run_as_user);
     SAFE_FREE(conf.sendmail_socket);
     SAFE_FREE(conf.fixed_ip);
+    SAFE_FREE(conf.reject_reason);
     if (conf.cidrs) {
 	CIDR *it = conf.cidrs, *it_next;
 
@@ -378,6 +381,7 @@ static int load_config(void) {
     conf.tag = strdup(TAG_STRING);
     conf.quarantine_box = strdup(QUARANTINE_BOX);
     conf.fixed_ip = NULL;
+    conf.reject_reason = REJECT_REASON;
     conf.run_as_user = strdup(USER);
     conf.sendmail_socket = strdup(OCONN);
     conf.syslog_facility = SYSLOG_FACILITY;
@@ -525,6 +529,10 @@ static int load_config(void) {
 	}
 	if (!strcasecmp(key, "fixedclientip")) {
 	    conf.fixed_ip = strdup(val);
+	    continue;
+	}
+	if (!strcasecmp(key, "rejectreason")) {
+	    conf.reject_reason = strdup(val);
 	    continue;
 	}
 	if (!strcasecmp(key, "quarantinebox")) {
@@ -783,7 +791,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	    if (status == SPF_RESULT_FAIL && conf.refuse_fail && !conf.tos) {
 		char reject[2 * MAXLINE];
 
-		snprintf(reject, sizeof(reject), "Rejected, look at http://www.openspf.org/why.html?sender=%s&ip=%s&receiver=%s", context->sender, context->addr, context->site);
+		snprintf(reject, sizeof(reject), conf.reject_reason, context->sender, context->addr, context->site);
         if (conf.soft_fail) {
                 smfi_setreply(ctx, "450", "4.7.23", reject);
                 return SMFIS_TEMPFAIL;
@@ -869,7 +877,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     if (status == SPF_RESULT_FAIL && conf.refuse_fail && !conf.tos) {
 	char reject[2 * MAXLINE];
 
-	snprintf(reject, sizeof(reject), "Rejected, look at http://www.openspf.org/why.html?sender=%s&ip=%s&receiver=%s", context->sender, context->addr, context->site);
+	snprintf(reject, sizeof(reject), conf.reject_reason, context->sender, context->addr, context->site);
 	if (spf_response) SPF_response_free(spf_response);
 	if (spf_request) SPF_request_free(spf_request);
 	if (spf_server) SPF_server_free(spf_server);
@@ -907,7 +915,7 @@ static sfsistat smf_envrcpt(SMFICTX *ctx, char **args) {
 	if (context->status == SPF_RESULT_FAIL && conf.refuse_fail) {
 	    char reject[2 * MAXLINE];
 
-	    snprintf(reject, sizeof(reject), "Rejected, look at http://www.openspf.org/why.html?sender=%s&ip=%s&receiver=%s", context->sender, context->addr, context->site);
+	    snprintf(reject, sizeof(reject), conf.reject_reason, context->sender, context->addr, context->site);
         if (conf.soft_fail) {
                 smfi_setreply(ctx, "450", "4.1.1", reject);
                 return SMFIS_TEMPFAIL;
