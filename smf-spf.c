@@ -381,7 +381,7 @@ static int load_config(void) {
     conf.tag = strdup(TAG_STRING);
     conf.quarantine_box = strdup(QUARANTINE_BOX);
     conf.fixed_ip = NULL;
-    conf.reject_reason = REJECT_REASON;
+    conf.reject_reason = strdup(REJECT_REASON);
     conf.run_as_user = strdup(USER);
     conf.sendmail_socket = strdup(OCONN);
     conf.syslog_facility = SYSLOG_FACILITY;
@@ -532,6 +532,7 @@ static int load_config(void) {
 	    continue;
 	}
 	if (!strcasecmp(key, "rejectreason")) {
+	    SAFE_FREE(conf.reject_reason);
 	    conf.reject_reason = strdup(val);
 	    continue;
 	}
