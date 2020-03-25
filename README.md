@@ -3,7 +3,6 @@ smf-spf
 
 ![GitHub release](https://img.shields.io/github/release/jcbf/smf-spf/all.svg?style=plastic)
 [![Build Status](https://travis-ci.org/jcbf/smf-spf.svg?branch=master)](https://travis-ci.org/jcbf/smf-spf)
-[![Stories in Ready](https://badge.waffle.io/jcbf/smf-spf.svg?label=ready&title=Ready)](http://waffle.io/jcbf/smf-spf)
 [![Coverage Status](https://coveralls.io/repos/github/jcbf/smf-spf/badge.svg?branch=master)](https://coveralls.io/github/jcbf/smf-spf?branch=master)
 
 It's a lightweight, fast and reliable Sendmail milter that implements the Sender Policy Framework
@@ -20,6 +19,27 @@ This was abandoned code and has several bugfixes and enhancements. like:
 - Reject NDR when there is no SPF policy defined 
 
 # Change Log
+
+## [v2.4.3](https://github.com/jcbf/smf-spf/tree/v2.4.3) (2020-03-25)
+
+[Full Changelog](https://github.com/jcbf/smf-spf/compare/v2.4.2...v2.4.3)
+
+**Implemented enhancements:**
+
+- Make SPF evaluation  with a fixed IP [\#65](https://github.com/jcbf/smf-spf/issues/65)
+- Disable localpart size check [\#52](https://github.com/jcbf/smf-spf/issues/52)
+
+**Fixed bugs:**
+
+- Typos [\#55](https://github.com/jcbf/smf-spf/issues/55)
+- `smf-spf -f` does not override config file value `Daemonize` [\#62](https://github.com/jcbf/smf-spf/issues/62)
+
+**Merged pull requests:**
+
+- \#65 add outbound spf [\#66](https://github.com/jcbf/smf-spf/pull/66) ([jcbf](https://github.com/jcbf))
+- Add systemd service definition. [\#64](https://github.com/jcbf/smf-spf/pull/64) ([whyscream](https://github.com/whyscream))
+- Correct parse os option -f [\#63](https://github.com/jcbf/smf-spf/pull/63) ([jcbf](https://github.com/jcbf))
+- \#55 Fix typos [\#57](https://github.com/jcbf/smf-spf/pull/57) ([jcbf](https://github.com/jcbf))
 
 ## [v2.4.2](https://github.com/jcbf/smf-spf/tree/v2.4.2) (2018-07-18)
 [Full Changelog between 2.4.1 and 2.4.2](https://github.com/jcbf/smf-spf/compare/v2.4.1...v2.4.2)
