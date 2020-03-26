@@ -1,4 +1,7 @@
 language: c
+sudo: 'required'
+services:
+  - 'docker'
 compiler:
   - clang
   - gcc
@@ -19,3 +22,7 @@ after_success:
   - lcov --list coverage.info
   - coveralls-lcov --repo-token ${COVERALLS_TOKEN} coverage.info
   - bash <(curl -s https://codecov.io/bash)
+  - if [[ "$TRAVIS_BRANCH" == "master" ]]; then
+      docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD ;
+      docker push underspell/smf-spf
+    fi
