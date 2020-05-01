@@ -61,7 +61,7 @@
 #define ADD_RECV_HEADER		0
 #define QUARANTINE		0
 #define DAEMONIZE		1
-#define VERSION			"2.4.3"
+#define VERSION			"2.4.4"
 #define REJECT_REASON	"Rejected, look at http://www.openspf.org/why.html?sender=%s&ip=%s&receiver=%s"
 
 #define MAXLINE			258
