@@ -13,7 +13,7 @@ end
 -- send connection information
 -- mt.negotiate() is called implicitly
 mt.macro(conn, SMFIC_CONNECT, "j", "mta.name.local")
-if mt.conninfo(conn, "localhost", "192.0.0.194") ~= nil then
+if mt.conninfo(conn, "localhost", "") ~= nil then
 	error("mt.conninfo() failed")
 end
 if mt.getreply(conn) ~= SMFIR_CONTINUE then
