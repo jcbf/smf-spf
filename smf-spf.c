@@ -61,7 +61,7 @@
 #define ADD_RECV_HEADER		0
 #define QUARANTINE		0
 #define DAEMONIZE		1
-#define VERSION			"2.4.3"
+#define VERSION			"2.4.4"
 #define REJECT_REASON	"Rejected, look at http://www.openspf.org/why.html?sender=%s&ip=%s&receiver=%s"
 
 #define MAXLINE			258
@@ -1080,6 +1080,13 @@ struct smfiDesc smfilter = {
 int main(int argc, char **argv) {
     const char *ofile = NULL;
     int ch, ret = 0;
+	char *strHelper;
+	char *daemon_name;
+	strHelper = argv[0];
+	if (strHelper[(strlen(strHelper) - 1)] == '/')
+        strHelper[(strlen(strHelper) - 1)] = '\0';
+
+    (daemon_name = strrchr(strHelper, '/')) ? ++daemon_name : (daemon_name = strHelper);
 
     while ((ch = getopt(argc, argv, "fhc:")) != -1) {
 	switch (ch) {
@@ -1100,8 +1107,8 @@ int main(int argc, char **argv) {
     regcomp(&re_ipv4, IPV4_DOT_DECIMAL, REG_EXTENDED|REG_ICASE);
     if (!load_config()) fprintf(stderr, "Warning: smf-spf: loading configuration file %s failed\n", config_file);
     tzset();
-    openlog("smf-spf", LOG_PID|LOG_NDELAY, conf.syslog_facility);
-    syslog(LOG_INFO, "starting smf-spf %s listening on %s", VERSION, conf.sendmail_socket);
+    openlog(daemon_name, LOG_PID|LOG_NDELAY, conf.syslog_facility);
+    syslog(LOG_INFO, "starting %s %s listening on %s", daemon_name, VERSION, conf.sendmail_socket);
     if (!strncmp(conf.sendmail_socket, "unix:", 5))
 	ofile = conf.sendmail_socket + 5;
     else
@@ -1115,12 +1122,12 @@ int main(int argc, char **argv) {
 	    goto done;
 	}
 	setgroups(1, &pw->pw_gid);
-	if (setgid(pw->pw_gid)) {
-	    fprintf(stderr, "setgid: %s\n", strerror(errno));
+	if (setgid(pw->pw_gid)) {								// LCOV_EXCL_LINE
+	    fprintf(stderr, "setgid: %s\n", strerror(errno));	// LCOV_EXCL_LINE
 	    goto done;
 	}
-	if (setuid(pw->pw_uid)) {
-	    fprintf(stderr, "setuid: %s\n", strerror(errno));
+	if (setuid(pw->pw_uid)) { 								// LCOV_EXCL_LINE
+	    fprintf(stderr, "setuid: %s\n", strerror(errno));	// LCOV_EXCL_LINE
 	    goto done;
 	}
         syslog(LOG_INFO, "running as uid: %i, gid: %i", (int) pw->pw_uid, (int) pw->pw_gid);
@@ -1145,7 +1152,7 @@ int main(int argc, char **argv) {
     if (conf.spf_ttl && !cache_init()) syslog(LOG_ERR, "[ERROR] cache engine init failed");
     ret = smfi_main();
     if (ret != MI_SUCCESS) syslog(LOG_ERR, "[ERROR] terminated due to a fatal error");
-    else syslog(LOG_NOTICE, "stopping smf-spf %s listening on %s", VERSION, conf.sendmail_socket);
+    else syslog(LOG_NOTICE, "stopping %s %s listening on %s", daemon_name, VERSION, conf.sendmail_socket);
     if (cache) cache_destroy();
     pthread_mutex_destroy(&cache_mutex);
 done:

@@ -60,11 +60,11 @@ end
 if mt.eom_check(conn, MT_HDRINSERT, "Authentication-Results") or
    mt.eom_check(conn, MT_HDRADD, "Authentication-Results") then
 	ar = mt.getheader(conn, "Authentication-Results", 0)
-	if string.find(ar, "spf=none", 1, true) == nil then
+	if string.find(ar, "spf=none", 1) then
 		mt.echo ("Got header Authentication-Results: " .. ar)
 		error("incorrect Authentication-Results field")
 	else
-		mt.echo("SPF neutral ")
+		mt.echo("SPF neutral")
 	end
 else
 	mt.echo ("Got header Authentication-Results: " .. ar)
