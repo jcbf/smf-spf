@@ -1,5 +1,5 @@
 -- Copyright (c) 2009-2013, The Trusted Domain Project.  All rights reserved.
-mt.echo("SPF pass  test")
++mt.echo("SPF Fixed-client pass.  Using ./smf-spf-tests-fixedip.conf")
 
 -- try to start the filter
 mt.startfilter("./smf-spf", "-f", "-c","./smf-spf-tests-fixedip.conf")
@@ -13,7 +13,7 @@ end
 -- send connection information
 -- mt.negotiate() is called implicitly
 mt.macro(conn, SMFIC_CONNECT, "j", "mta.name.local")
-if mt.conninfo(conn, "localhost", "") ~= nil then
+if mt.conninfo(conn, "localhost", "10.10.10.10") ~= nil then
 	error("mt.conninfo() failed")
 end
 if mt.getreply(conn) ~= SMFIR_CONTINUE then
