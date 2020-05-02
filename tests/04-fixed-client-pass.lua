@@ -1,5 +1,5 @@
 -- Copyright (c) 2009-2013, The Trusted Domain Project.  All rights reserved.
-+mt.echo("SPF Fixed-client pass.  Using ./smf-spf-tests-fixedip.conf")
+mt.echo("SPF Fixed-client pass.  Using ./smf-spf-tests-fixedip.conf")
 
 -- try to start the filter
 mt.startfilter("./smf-spf", "-f", "-c","./smf-spf-tests-fixedip.conf")

@@ -13,9 +13,9 @@ for testfile in tests/* ; do
     else 
             echo -e "\e[31mfailed\e[39m"
             RET=1
-            FAILED+="$testfile "
+            FAILED+="\n\t$testfile"
     fi
 done
 
-[[ -z "$FAILED+" ]] || echo "Failed tests $FAILED"
+[[ -z "$FAILED" ]] || echo -e "#########################################\nFailed tests $FAILED"
 exit $RET
