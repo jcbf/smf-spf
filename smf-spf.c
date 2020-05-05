@@ -177,7 +177,8 @@ struct context {
 static regex_t re_ipv4;
 static cache_item **cache = NULL;
 static const char *config_file = CONFIG_FILE;
-static int foreground = 0;
+static short foreground = 0;
+static short dump_config = 0;
 static config conf;
 static pthread_mutex_t cache_mutex;
 static facilities syslog_facilities[] = {
@@ -374,6 +375,55 @@ static void free_config(void) {
     }
 }
 
+
+static int print_CIDR(CIDR *hash, char *text) {
+    CIDR *it = hash;
+    struct in_addr ip_addr;
+
+    while (it) {
+	ip_addr.s_addr = it->ip;
+	printf ("%s \t%s/%d\n",text,inet_ntoa(ip_addr),it->mask);
+	it = it->next;
+    }
+    return 0;
+}
+
+static int print_STR(STR *hash, char *text) {
+    STR *it = hash;
+
+    while (it) {
+	printf ("%s \t%s\n",text,it->str);
+	it = it->next;
+    }
+    return 0;
+}
+
+static int print_config(void) {
+	STR *it;
+	printf ("User\t%s\n",conf.run_as_user);
+	printf ("Socket\t%s\n",conf.sendmail_socket);
+	if (conf.tos) print_STR(conf.tos,"WhitelistTo");
+	if (conf.ptrs) print_STR (conf.ptrs,"WhitelistPTR");
+	if (conf.froms) print_STR (conf.froms,"WhitelistFrom");
+	if (conf.cidrs) print_CIDR (conf.cidrs,"WhitelistIP");
+	printf ("RelaxedLocalPart\t%s\n",conf.relaxed_localpart ? "On" : "Off");
+	printf ("RefuseFail\t%s\n",conf.refuse_fail ? "On" : "Off");
+	printf ("RefuseSPFNone\t%s\n",conf.refuse_none ? "On" : "Off");
+	printf ("RefuseSPFNoneHelo\t%s\n",conf.refuse_none_helo ? "On" : "Off");
+	printf ("SoftFail\t%s\n",conf.soft_fail ? "On" : "Off");
+	printf ("AcceptTempError\t%s\n",conf.accept_temperror ? "On" : "Off");
+	printf ("TagSubject\t%s\n",conf.tag_subject ? "On" : "Off");
+	printf ("Tag\t%s\n",conf.tag);
+	printf ("AddHeader\t%s\n",conf.add_header ? "On" : "Off");
+	printf ("AddReceivedHeader\t%s\n",conf.add_recv_spf_header ? "On" : "Off");
+	printf ("Quarantine\t%s\n",conf.quarantine ? "On" : "Off");
+	printf ("QuarantineBox\t%s\n",conf.quarantine_box);
+	printf ("Syslog\t%s\n",conf.syslog_facility ? "On" : "Off");
+	printf ("Daemonize\t%s\n",conf.daemonize ? "On" : "Off");
+	printf ("TTL\t%li\n",conf.spf_ttl);
+	printf ("RejectReason\t%s\n",conf.reject_reason);
+	if (conf.fixed_ip != NULL) printf ("FixedClientIP\t%s\n",conf.fixed_ip);
+}
 static int load_config(void) {
     FILE *fp;
     char buf[2 * MAXLINE];
@@ -1088,11 +1138,14 @@ int main(int argc, char **argv) {
 
     (daemon_name = strrchr(strHelper, '/')) ? ++daemon_name : (daemon_name = strHelper);
 
-    while ((ch = getopt(argc, argv, "fhc:")) != -1) {
+    while ((ch = getopt(argc, argv, "fhdc:")) != -1) {
 	switch (ch) {
 	    case 'h':
 		fprintf(stderr, "Usage: smf-spf [-f] -c <config file>\n");
 		return 0;
+	    case 'd':
+		dump_config = 1;
+		break;
 	    case 'f':
 		foreground = 1;
 		break;
@@ -1106,6 +1159,10 @@ int main(int argc, char **argv) {
     memset(&conf, 0, sizeof(conf));
     regcomp(&re_ipv4, IPV4_DOT_DECIMAL, REG_EXTENDED|REG_ICASE);
     if (!load_config()) fprintf(stderr, "Warning: smf-spf: loading configuration file %s failed\n", config_file);
+    if ( dump_config ) {
+	print_config();
+	goto done;
+    }
     tzset();
     openlog(daemon_name, LOG_PID|LOG_NDELAY, conf.syslog_facility);
     syslog(LOG_INFO, "starting %s %s listening on %s", daemon_name, VERSION, conf.sendmail_socket);
