@@ -1,0 +1,11 @@
+[Unit]
+Description = Sender Policy Framework milter
+After = network.target
+Before = postfix.service sendmail.service
+
+[Service]
+Type = forking
+ExecStart = /usr/sbin/smf-spf
+
+[Install]
+WantedBy = multi-user.target
