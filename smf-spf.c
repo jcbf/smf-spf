@@ -1150,7 +1150,7 @@ int main(int argc, char **argv) {
 	goto done;
     }
     umask(0177);
-    if (conf.spf_ttl && !cache_init()) syslog(LOG_ERR, "[ERROR] cache engine init failed");
+    if (conf.spf_ttl && !cache_init()) log_message(LOG_ERR, "[ERROR] cache engine init failed");
     ret = smfi_main();
     if (ret != MI_SUCCESS) syslog(LOG_ERR, "[ERROR] terminated due to a fatal error");
     else syslog(LOG_NOTICE, "stopping %s %s listening on %s", daemon_name, VERSION, conf.sendmail_socket);
