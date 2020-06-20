@@ -40,6 +40,7 @@
 #include <syslog.h>
 #include <time.h>
 #include <unistd.h>
+#include <limits.h>
 #include "spf2/spf.h"
 
 #define CONFIG_FILE		"/etc/mail/smfs/smf-spf.conf"
@@ -63,6 +64,7 @@
 #define DAEMONIZE		1
 #define VERSION			"2.4.4"
 #define REJECT_REASON	"Rejected, look at http://www.openspf.org/why.html?sender=%s&ip=%s&receiver=%s"
+#define SYSLOG_DISABLE	-2
 
 #define MAXLINE			258
 #define MAXLOCALPART	64
@@ -131,6 +133,7 @@ typedef struct STR {
 typedef struct config {
     char *tag;
     char *quarantine_box;
+    FILE *log_file;
     char *run_as_user;
     char *sendmail_socket;
     CIDR *cidrs;
@@ -179,6 +182,9 @@ static cache_item **cache = NULL;
 static const char *config_file = CONFIG_FILE;
 static int foreground = 0;
 static config conf;
+static char *daemon_name;
+static char hostname[HOST_NAME_MAX+1];
+static pid_t mypid = 0;
 static pthread_mutex_t cache_mutex;
 static facilities syslog_facilities[] = {
     { "daemon", LOG_DAEMON },
@@ -201,6 +207,36 @@ static sfsistat smf_envrcpt(SMFICTX *, char **);
 static sfsistat smf_header(SMFICTX *, char *, char *);
 static sfsistat smf_eom(SMFICTX *);
 static sfsistat smf_close(SMFICTX *);
+
+static void log_init() {
+	if ( conf.syslog_facility != SYSLOG_DISABLE) 
+	    openlog(daemon_name, LOG_PID|LOG_NDELAY, conf.syslog_facility);
+}
+
+static void log_message(int log_level, const char *fmt, ...) {
+	va_list ap;
+	
+	char time_str[32];
+    struct tm *tm;
+
+	if (conf.log_file) {
+		va_start(ap, fmt);
+		time_t now = time (0);
+		tm = localtime (&now);		
+		strftime (time_str, sizeof(time_str), "%h %e %T", tm);
+
+		fprintf(conf.log_file,"%s %s %s[%d]: ",time_str,hostname,daemon_name,getpid());
+		vfprintf(conf.log_file,fmt, ap);
+		fprintf(conf.log_file,"\n");
+		fflush(conf.log_file);
+	}
+	if ( conf.syslog_facility != SYSLOG_DISABLE) {
+		va_start(ap, fmt);
+		vsyslog(log_level, fmt, ap);
+	}
+
+	va_end(ap);
+}
 
 static void strscpy(register char *dst, register const char *src, size_t size) {
     register size_t i;
@@ -333,6 +369,8 @@ static void free_config(void) {
     SAFE_FREE(conf.sendmail_socket);
     SAFE_FREE(conf.fixed_ip);
     SAFE_FREE(conf.reject_reason);
+    if (conf.log_file != NULL)
+		fclose(conf.log_file);
     if (conf.cidrs) {
 	CIDR *it = conf.cidrs, *it_next;
 
@@ -374,12 +412,14 @@ static void free_config(void) {
     }
 }
 
+
 static int load_config(void) {
     FILE *fp;
     char buf[2 * MAXLINE];
 
     conf.tag = strdup(TAG_STRING);
     conf.quarantine_box = strdup(QUARANTINE_BOX);
+    conf.log_file = NULL;
     conf.fixed_ip = NULL;
     conf.reject_reason = strdup(REJECT_REASON);
     conf.run_as_user = strdup(USER);
@@ -536,6 +576,14 @@ static int load_config(void) {
 	    conf.reject_reason = strdup(val);
 	    continue;
 	}
+	if (!strcasecmp(key, "logto")) {
+			if (!(conf.log_file = fopen(val,"a"))){
+				fprintf (stderr,"Error: Can't open file %s to write. (errno: %d - %s)\n",
+					val,errno,strerror(errno));
+				return 0;
+			}
+	    continue;
+	}
 	if (!strcasecmp(key, "quarantinebox")) {
 	    SAFE_FREE(conf.quarantine_box);
 	    conf.quarantine_box = strdup(val);
@@ -561,11 +609,13 @@ static int load_config(void) {
 	}
 	if (!strcasecmp(key, "syslog")) {
 	    int i;
-
-	    for (i = 0; i < FACILITIES_AMOUNT; i++)
-		if (!strcasecmp(val, syslog_facilities[i].name))
-		    conf.syslog_facility = syslog_facilities[i].facility;
-	    continue;
+		if (!strcasecmp(val, "none")) 
+		    conf.syslog_facility = SYSLOG_DISABLE;
+		else
+		    for (i = 0; i < FACILITIES_AMOUNT; i++)
+			if (!strcasecmp(val, syslog_facilities[i].name))
+			    conf.syslog_facility = syslog_facilities[i].facility;
+		    continue;
 	}
     }
     fclose(fp);
@@ -628,7 +678,7 @@ static int to_check(const char *to) {
 // LCOV_EXCL_START
 static void die(const char *reason) {
 
-    syslog(LOG_ERR, "[ERROR] die: %s", reason);
+    log_message(LOG_ERR, "[ERROR] die: %s", reason);
     smfi_stop();
     sleep(60);
     abort();
@@ -682,18 +732,18 @@ static sfsistat smf_connect(SMFICTX *ctx, char *name, _SOCK_ADDR *sa) {
     if (authserv_id == NULL) {
         char* p = NULL;
         if (((p = smfi_getsymval(ctx, "{j}"))) == NULL) {
-            syslog(LOG_ERR, "[ERROR] can't get MTA-name");
+            log_message(LOG_ERR, "[ERROR] can't get MTA-name");
             return SMFIS_ACCEPT;
         }
         if ((authserv_id = strdup(p)) == NULL) {
-            syslog(LOG_ERR, "[ERROR] can't save MTA-name"); // LCOV_EXCL_LINE
+            log_message(LOG_ERR, "[ERROR] can't save MTA-name"); // LCOV_EXCL_LINE
             return SMFIS_ACCEPT; // LCOV_EXCL_LINE
         }
     }
 
     if (sa == NULL)
     {
-        syslog(LOG_NOTICE, "unknown sender IP address, skipping SPF check");
+        log_message(LOG_NOTICE, "unknown sender IP address, skipping SPF check");
         return SMFIS_ACCEPT;
     }
 
@@ -715,7 +765,7 @@ static sfsistat smf_connect(SMFICTX *ctx, char *name, _SOCK_ADDR *sa) {
     if (conf.cidrs && ip_check(inet_addr(host))) return SMFIS_ACCEPT;
     if (conf.ptrs && ptr_check(name)) return SMFIS_ACCEPT;
     if (!(context = calloc(1, sizeof(*context)))) {
-			syslog(LOG_ERR, "[ERROR] %s", strerror(errno)); // LCOV_EXCL_LINE
+			log_message(LOG_ERR, "[ERROR] %s", strerror(errno)); // LCOV_EXCL_LINE
 			return SMFIS_ACCEPT; // LCOV_EXCL_LINE
     }
     smfi_setpriv(ctx, context);
@@ -788,7 +838,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	status = cache_get(context->key);
 	mutex_unlock(&cache_mutex);
 	if (status != SPF_RESULT_INVALID) {
-	    syslog(LOG_INFO, "SPF %s (cached): ip=%s, fqdn=%s, helo=%s, from=%s", SPF_strresult(status), context->addr, context->fqdn, context->helo, context->from);
+	    log_message(LOG_INFO, "SPF %s (cached): ip=%s, fqdn=%s, helo=%s, from=%s", SPF_strresult(status), context->addr, context->fqdn, context->helo, context->from);
 	    if (status == SPF_RESULT_FAIL && conf.refuse_fail && !conf.tos) {
 		char reject[2 * MAXLINE];
 
@@ -806,7 +856,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	}
     }
     if (!(spf_server = SPF_server_new(SPF_DNS_RESOLV, 0))) {
-	syslog(LOG_ERR, "[ERROR] SPF engine init failed"); // LCOV_EXCL_LINE
+	log_message(LOG_ERR, "[ERROR] SPF engine init failed"); // LCOV_EXCL_LINE
 	return SMFIS_ACCEPT; // LCOV_EXCL_LINE
     }
     SPF_server_set_rec_dom(spf_server, context->site);
@@ -816,7 +866,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     SPF_request_set_helo_dom(spf_request, context->helo);
     SPF_request_set_env_from(spf_request, context->sender);
     if (SPF_request_query_mailfrom(spf_request, &spf_response)) {
-	syslog(LOG_INFO, "SPF none: ip=%s, fqdn=%s, helo=%s, from=%s", context->addr, context->fqdn, context->helo, context->from);
+	log_message(LOG_INFO, "SPF none: ip=%s, fqdn=%s, helo=%s, from=%s", context->addr, context->fqdn, context->helo, context->from);
     if ((status == SPF_RESULT_NONE) || (status == SPF_RESULT_INVALID)) {
             if (conf.refuse_none && !strstr(context->from, "<>")) {
                     char reject[2 * MAXLINE];
@@ -846,7 +896,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     }
     if (!spf_response) goto done;
     status = SPF_response_result(spf_response);
-    syslog(LOG_NOTICE, "SPF %s: ip=%s, fqdn=%s, helo=%s, from=%s", SPF_strresult(status), context->addr, context->fqdn, context->helo, context->from);
+    log_message(LOG_NOTICE, "SPF %s: ip=%s, fqdn=%s, helo=%s, from=%s", SPF_strresult(status), context->addr, context->fqdn, context->helo, context->from);
     switch (status) {
 	case SPF_RESULT_PASS:
 	case SPF_RESULT_FAIL:
@@ -1081,12 +1131,12 @@ int main(int argc, char **argv) {
     const char *ofile = NULL;
     int ch, ret = 0;
 	char *strHelper;
-	char *daemon_name;
 	strHelper = argv[0];
 	if (strHelper[(strlen(strHelper) - 1)] == '/')
         strHelper[(strlen(strHelper) - 1)] = '\0';
 
     (daemon_name = strrchr(strHelper, '/')) ? ++daemon_name : (daemon_name = strHelper);
+	gethostname(hostname,HOST_NAME_MAX+1);
 
     while ((ch = getopt(argc, argv, "fhc:")) != -1) {
 	switch (ch) {
@@ -1105,10 +1155,13 @@ int main(int argc, char **argv) {
     }
     memset(&conf, 0, sizeof(conf));
     regcomp(&re_ipv4, IPV4_DOT_DECIMAL, REG_EXTENDED|REG_ICASE);
-    if (!load_config()) fprintf(stderr, "Warning: smf-spf: loading configuration file %s failed\n", config_file);
+    if (!load_config()) { 
+		fprintf(stderr, "Warning: smf-spf: loading configuration file %s failed\n", config_file);
+		goto done;
+	}
     tzset();
-    openlog(daemon_name, LOG_PID|LOG_NDELAY, conf.syslog_facility);
-    syslog(LOG_INFO, "starting %s %s listening on %s", daemon_name, VERSION, conf.sendmail_socket);
+	log_init();
+    log_message(LOG_INFO, "starting %s %s listening on %s", daemon_name, VERSION, conf.sendmail_socket);
     if (!strncmp(conf.sendmail_socket, "unix:", 5))
 	ofile = conf.sendmail_socket + 5;
     else
@@ -1130,7 +1183,7 @@ int main(int argc, char **argv) {
 	    fprintf(stderr, "setuid: %s\n", strerror(errno));	// LCOV_EXCL_LINE
 	    goto done;
 	}
-        syslog(LOG_INFO, "running as uid: %i, gid: %i", (int) pw->pw_uid, (int) pw->pw_gid);
+        log_message(LOG_INFO, "running as uid: %d, gid: %d", (int) pw->pw_uid, (int) pw->pw_gid);
     }
     if (smfi_setconn((char *)conf.sendmail_socket) != MI_SUCCESS) {
 	fprintf(stderr, "smfi_setconn failed: %s\n", conf.sendmail_socket); // LCOV_EXCL_LINE
@@ -1151,8 +1204,8 @@ int main(int argc, char **argv) {
     umask(0177);
     if (conf.spf_ttl && !cache_init()) syslog(LOG_ERR, "[ERROR] cache engine init failed");
     ret = smfi_main();
-    if (ret != MI_SUCCESS) syslog(LOG_ERR, "[ERROR] terminated due to a fatal error");
-    else syslog(LOG_NOTICE, "stopping %s %s listening on %s", daemon_name, VERSION, conf.sendmail_socket);
+    if (ret != MI_SUCCESS) log_message(LOG_ERR, "[ERROR] terminated due to a fatal error");
+    else log_message(LOG_NOTICE, "stopping %s %s listening on %s", daemon_name, VERSION, conf.sendmail_socket);
     if (cache) cache_destroy();
     pthread_mutex_destroy(&cache_mutex);
 done:
