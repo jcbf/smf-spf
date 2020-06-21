@@ -23,6 +23,7 @@ after_success:
   - coveralls-lcov --repo-token ${COVERALLS_TOKEN} coverage.info
   - bash <(curl -s https://codecov.io/bash)
   - if [[ "$TRAVIS_BRANCH" == "master" ]]; then
-       echo "$DOCKER_PASSWORD" | docker login -u $DOCKER_USERNAME --password-stdin
-      docker push underspell/smf-spf 
+      echo "$DOCKER_PASSWORD" | docker login -u $DOCKER_USERNAME --password-stdin;
+      docker build . ;
+      docker push underspell/smf-spf  ;
     fi
