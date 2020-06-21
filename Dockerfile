@@ -34,6 +34,9 @@ RUN chmod +x /etc/services.d/*/run \
  && sed -i -r 's/^#?Daemonize\s.*$/Daemonize off/g' /etc/smfs/smf-spf.conf \
  && sed -i -r 's/^#?User\s.*$/User nobody/g'        /etc/smfs/smf-spf.conf \
  && sed -i -r 's/^#?Socket\s.*$/Socket inet:8890/g' /etc/smfs/smf-spf.conf \
+ && sed -i -r 's/^#?Socket\s.*$/Socket inet:8890/g' /etc/smfs/smf-spf.conf \
+ && sed -i -r 's/^#?LogTo\s.*$/LogTo \/dev\/stdout/g' /etc/smfs/smf-spf.conf \
+ && sed -i -r 's/^#?Syslog\s.*$/Socket none/g' /etc/smfs/smf-spf.conf \
 
  # Prepare directory for unix socket
  && mkdir -p /var/run/smfs \
