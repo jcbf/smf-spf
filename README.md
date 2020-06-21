@@ -20,6 +20,16 @@ This was abandoned code and has several bugfixes and enhancements. like:
 
 # Change Log
 
+## [v2.4.4](https://github.com/jcbf/smf-spf/tree/v2.4.4) (2020-06-21)
+
+**Implemented enhancements:**
+
+- Docker image improvments
+- Misc fixes [\#72](https://github.com/jcbf/smf-spf/pull/72) ([jcbf](https://github.com/jcbf))
+- Log to file [\#71](https://github.com/jcbf/smf-spf/pull/71) ([jcbf](https://github.com/jcbf))
+- specfile and patches for building on Fedora and CentOS Linux [\#70](https://github.com/jcbf/smf-spf/pull/70) ([mikaku](https://github.com/mikaku))
+- Get daemon name from cmd line as requested in \#67 [\#68](https://github.com/jcbf/smf-spf/pull/68) ([jcbf](https://github.com/jcbf))
+
 ## [v2.4.3](https://github.com/jcbf/smf-spf/tree/v2.4.3) (2020-03-25)
 
 [Full Changelog](https://github.com/jcbf/smf-spf/compare/v2.4.2...v2.4.3)
