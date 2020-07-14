@@ -60,12 +60,12 @@ end
 if mt.eom_check(conn, MT_HDRINSERT, "Authentication-Results") or
    mt.eom_check(conn, MT_HDRADD, "Authentication-Results") then
 	ar = mt.getheader(conn, "Authentication-Results", 0)
-	if string.find(ar, "spf=softfail", 1) then
-                mt.echo("SPF softfail")
-        else
-                mt.echo(" Got AR: "..ar);
-                error("incorrect Authentication-Results field")
-        end
+	if string.find(ar, "spf=softfail", 1, true) == nil then
+		mt.echo ("Got header Authentication-Results: " .. ar)
+		error("incorrect Authentication-Results field")
+	else
+		mt.echo("SPF softfail ")
+	end
 else
 	mt.echo ("Got header Authentication-Results: " .. ar)
 	error("missing Authentication-Results field")

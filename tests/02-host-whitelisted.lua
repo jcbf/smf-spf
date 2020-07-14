@@ -11,7 +11,7 @@ end
 
 -- send connection information
 
-mt.macro(conn, SMFIC_CONNECT, "j", "")
+mt.macro(conn, SMFIC_CONNECT, "j", "mta.name.local")
 if mt.conninfo(conn, "server.example.org", "2001:0101:DEAD:BEEF::1") ~= nil then
 	error("mt.conninfo() failed")
 end

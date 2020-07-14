@@ -13,7 +13,7 @@ end
 -- send connection information
 -- mt.negotiate() is called implicitly
 mt.macro(conn, SMFIC_CONNECT, "j", "mta.name.local")
-if mt.conninfo(conn, "hostname.underspell.com","10.11.12.13") ~= nil then
+if mt.conninfo(conn, "helo.underspell.com","10.11.12.13") ~= nil then
 	error("mt.conninfo() failed")
 end
 if mt.getreply(conn) ~= SMFIR_CONTINUE then
@@ -67,14 +67,13 @@ end
 if mt.eom_check(conn, MT_HDRINSERT, "Authentication-Results") or
    mt.eom_check(conn, MT_HDRADD, "Authentication-Results") then
 	ar = mt.getheader(conn, "Authentication-Results", 0)
-	mt.echo("Got AR "..ar)
-	if string.find(ar, "spf=pass", 1) then
-		mt.echo("SPF pass ")
-	else
+	if string.find(ar, "spf=pass", 1, true) == nil then
 		error("incorrect Authentication-Results field")
+	else
+		mt.echo("SPF pass ")
 	end
 else
+	mt.echo ("Got header Authentication-Results: " .. ar)
 	error("missing Authentication-Results field")
 end
-
 mt.disconnect(conn)
