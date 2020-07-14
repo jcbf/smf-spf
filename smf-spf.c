@@ -126,6 +126,12 @@ typedef struct CIDR {
     struct CIDR *next;
 } CIDR;
 
+typedef struct IPNAT {
+    unsigned long srcip;
+    unsigned long destip;
+    struct IPNAT *next;
+} IPNAT;
+
 typedef struct STR {
     char *str;
     struct STR *next;
@@ -137,6 +143,7 @@ typedef struct config {
     FILE *log_file;
     char *run_as_user;
     char *sendmail_socket;
+    IPNAT *ipnats;
     CIDR *cidrs;
     STR *ptrs;
     STR *froms;
@@ -372,6 +379,15 @@ static void free_config(void) {
     SAFE_FREE(conf.reject_reason);
     if (conf.log_file != NULL)
 		fclose(conf.log_file);
+
+    if (conf.ipnats) {
+	IPNAT *it = conf.ipnats, *it_next;
+		while (it) {
+			it_next = it->next;
+			SAFE_FREE(it);
+			it = it_next;
+		}
+    }
     if (conf.cidrs) {
 	CIDR *it = conf.cidrs, *it_next;
 
@@ -472,6 +488,48 @@ static int load_config(void) {
 		    conf.cidrs->mask = mask;
 		}
 	    }
+	    continue;
+	}
+	if (!strcasecmp(key, "clientipnat")) {
+		char *sep = NULL;
+		unsigned long d_ip;
+
+	    if ((sep = strchr(val, ':'))) {
+			*sep++ = '\0';
+			if (*sep && !regexec(&re_ipv4, sep, 0, NULL, 0)) {
+				if ((d_ip = inet_addr(sep)) == 0xffffffff) {
+					log_message(LOG_ERR, "[CONFIG ERROR] ignore nat dest error:%s (entry:%s)", sep, buf);
+					continue;
+				} 
+			} else {
+				log_message(LOG_ERR, "[CONFIG ERROR] invalid destination ip (%s)", sep);
+				continue;
+			}
+	    } else {
+			log_message(LOG_ERR, "[CONFIG ERROR] invalid entry(%s). Must be src_ip:dest:ip", val);
+			continue;
+		}
+	    if (val[0] && !regexec(&re_ipv4, val, 0, NULL, 0)) {
+			IPNAT *it = NULL;
+			unsigned long s_ip;
+
+			if ((s_ip = inet_addr(val)) == 0xffffffff) {
+					log_message(LOG_ERR, "[CONFIG ERROR] ignore nat src error:%s (entry:%s/int:%li)", val, buf,s_ip);
+					continue;
+			} 
+			if (!conf.ipnats)
+				conf.ipnats = (IPNAT *) calloc(1, sizeof(IPNAT));
+			else
+				if ((it = (IPNAT *) calloc(1, sizeof(IPNAT)))) {
+					it->next = conf.ipnats;
+					conf.ipnats = it;
+				}
+			if (conf.ipnats) {
+				conf.ipnats->srcip = s_ip;
+				conf.ipnats->destip = d_ip;
+			}
+		} else 
+			log_message(LOG_ERR, "[CONFIG ERROR] entry(%s) is not a valid IP address", val);
 	    continue;
 	}
 	if (!strcasecmp(key, "whitelistptr")) {
@@ -646,6 +704,15 @@ static int ip_check(const unsigned long checkip) {
     return 0;
 }
 
+static unsigned long natip_check(const unsigned long checkip) {
+    IPNAT *it = conf.ipnats;
+    while (it) {
+		if (it->srcip == checkip) return it->destip;
+		it = it->next;
+    }
+    return 0;
+}
+
 static int ptr_check(const char *ptr) {
     STR *it = conf.ptrs;
 
@@ -729,6 +796,7 @@ static void add_rcpt(struct context *context) {
 static sfsistat smf_connect(SMFICTX *ctx, char *name, _SOCK_ADDR *sa) {
     struct context *context = NULL;
     char host[64];
+	unsigned long int d_ip;
 
     if (authserv_id == NULL) {
         char* p = NULL;
@@ -770,6 +838,11 @@ static sfsistat smf_connect(SMFICTX *ctx, char *name, _SOCK_ADDR *sa) {
 			return SMFIS_ACCEPT; // LCOV_EXCL_LINE
     }
     smfi_setpriv(ctx, context);
+    if (conf.ipnats && (d_ip = natip_check(inet_addr(host)))) {
+		snprintf(context->addr, sizeof(context->addr), "%li.%li.%li.%li",
+				d_ip >> 24 & 0xff, d_ip >> 16 & 0xff, d_ip >> 8 & 0xff, d_ip & 0xff);
+        log_message(LOG_INFO, "Found  NAT IP address. Original: %s . Final %li (%s)", host, d_ip,context->addr);
+	}
     if (conf.fixed_ip) 
             strscpy(context->addr, conf.fixed_ip, sizeof(context->addr) - 1);
     else
