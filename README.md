@@ -24,9 +24,9 @@ This was abandoned code and has several bugfixes and enhancements. like:
 **Merged pull requests:**
 
 - Feature/client ipnat [\#74](https://github.com/jcbf/smf-spf/pull/74) ([jcbf](https://github.com/jcbf))
-    ClientIPNAT allows IP address translation of the connecting IP
-    This is particular useful when you have internal email flows
-    and still have a SPF evaluation
+ClientIPNAT allows IP address translation of the connecting IP
+This is particular useful when you have internal email flows
+and still have a SPF evaluation
 
 ## [v2.4.5](https://github.com/jcbf/smf-spf/tree/v2.4.5) (2020-07-16)
 
