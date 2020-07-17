@@ -41,6 +41,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <limits.h>
+#include <stdbool.h>
 #include "spf2/spf.h"
 
 #define CONFIG_FILE		"/etc/mail/smfs/smf-spf.conf"
@@ -62,6 +63,7 @@
 #define ADD_RECV_HEADER		0
 #define QUARANTINE		0
 #define DAEMONIZE		1
+#define SKIP_AUTH		true
 #define VERSION			"2.4.5"
 #define REJECT_REASON	"Rejected, look at http://www.openspf.org/why.html?sender=%s&ip=%s&receiver=%s"
 #define SYSLOG_DISABLE	-2
@@ -162,6 +164,7 @@ typedef struct config {
     int daemonize;
     unsigned long spf_ttl;
     char *fixed_ip;
+    bool skip_auth;
     char *reject_reason;
 } config;
 
@@ -454,6 +457,7 @@ static int load_config(void) {
     conf.quarantine = QUARANTINE;
     conf.spf_ttl = SPF_TTL;
     conf.daemonize = DAEMONIZE;
+    conf.skip_auth = SKIP_AUTH;
     if (!(fp = fopen(config_file, "r"))) return 0;
     while (fgets(buf, sizeof(buf) - 1, fp)) {
 	char key[MAXLINE];
@@ -616,6 +620,10 @@ static int load_config(void) {
 	}
 	if (!strcasecmp(key, "addreceivedheader") && !strcasecmp(val, "on")) {
 	    conf.add_recv_spf_header = 1;
+	    continue;
+	}
+	if (!strcasecmp(key, "skipauth") && !strcasecmp(val, "off")) {
+	    conf.quarantine = false;
 	    continue;
 	}
 	if (!strcasecmp(key, "quarantine") && !strcasecmp(val, "on")) {
@@ -868,7 +876,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     SPF_response_t *spf_response = NULL;
     SPF_result_t status;
 
-    if (smfi_getsymval(ctx, "{auth_authen}")) return SMFIS_ACCEPT;
+    if ((conf.skip_auth) && (smfi_getsymval(ctx, "{auth_authen}"))) return SMFIS_ACCEPT;
     if (verify && strcmp(verify, "OK") == 0) return SMFIS_ACCEPT;
     if (*args) strscpy(context->from, *args, sizeof(context->from) - 1);
     if (strstr(context->from, "<>")) {
