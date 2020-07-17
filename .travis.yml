@@ -25,9 +25,6 @@ after_success:
   - if [[ "$TRAVIS_BRANCH" == "master" ]]; then
       echo "$DOCKER_PASSWORD" | docker login -u $DOCKER_USERNAME --password-stdin;
       export TAG=`grep "define VERSION" smf-spf.c | cut -d\"  -f2` ;
-      docker tag underspell/smf-spf $TAG ;
-      docker build . ;
-      docker push underspell/smf-spf  ;
-      docker tag underspell/smf-spf latest ;
+      docker build .  --tag my-image-name:$TAG ;
       docker push underspell/smf-spf  ;
     fi
