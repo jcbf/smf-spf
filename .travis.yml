@@ -24,6 +24,10 @@ after_success:
   - bash <(curl -s https://codecov.io/bash)
   - if [[ "$TRAVIS_BRANCH" == "master" ]]; then
       echo "$DOCKER_PASSWORD" | docker login -u $DOCKER_USERNAME --password-stdin;
+      export TAG=`grep "define VERSION" smf-spf.c | cut -d\"  -f2` ;
+      docker tag underspell/smf-spf $TAG ;
       docker build . ;
+      docker push underspell/smf-spf  ;
+      docker tag underspell/smf-spf latest ;
       docker push underspell/smf-spf  ;
     fi
