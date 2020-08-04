@@ -61,7 +61,8 @@ install:
 	fi
 	@echo Please, inspect and edit the $(CONFDIR)/smf-spf.conf file.
 
-
+test:
+	./run_tests.sh
 
 
 #
