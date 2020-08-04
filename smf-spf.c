@@ -623,7 +623,7 @@ static int load_config(void) {
 	    continue;
 	}
 	if (!strcasecmp(key, "skipauth") && !strcasecmp(val, "off")) {
-	    conf.quarantine = false;
+	    conf.skip_auth = false;
 	    continue;
 	}
 	if (!strcasecmp(key, "quarantine") && !strcasecmp(val, "on")) {
@@ -876,7 +876,10 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     SPF_response_t *spf_response = NULL;
     SPF_result_t status;
 
-    if ((conf.skip_auth) && (smfi_getsymval(ctx, "{auth_authen}"))) return SMFIS_ACCEPT;
+    if ((conf.skip_auth) && (smfi_getsymval(ctx, "{auth_authen}"))){
+	    log_message(LOG_INFO, "SPF skip : username %s, from=%s", smfi_getsymval(ctx, "{auth_authen}"), context->from);
+		return SMFIS_ACCEPT;
+	}
     if (verify && strcmp(verify, "OK") == 0) return SMFIS_ACCEPT;
     if (*args) strscpy(context->from, *args, sizeof(context->from) - 1);
     if (strstr(context->from, "<>")) {
