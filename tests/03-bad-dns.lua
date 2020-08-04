@@ -22,7 +22,7 @@ end
 -- badspf2.underspell.com. 7200  TXT "v=spf1 "
 
 mt.macro(conn, SMFIC_MAIL, "i", "DEADBEAF")
-if mt.mailfrom(conn, "<user@mail.bad.underspell.com>") ~= nil then
+if mt.mailfrom(conn, "<user@bad.underspell.com>") ~= nil then
         error("mt.mailfrom() failed")
 end
 if mt.getreply(conn) ~= SMFIR_CONTINUE then

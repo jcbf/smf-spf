@@ -1253,36 +1253,38 @@ int main(int argc, char **argv) {
 	struct passwd *pw;
 
 	if ((pw = getpwnam(conf.run_as_user)) == NULL) {
-	    fprintf(stderr, "%s: %s\n", conf.run_as_user, strerror(errno));
+	    fprintf(stderr, "getpwnam %s: %s\n", conf.run_as_user, errno ? strerror(errno) : "User does not exists");
 	    goto done;
 	}
+	// LCOV_EXCL_START
 	setgroups(1, &pw->pw_gid);
-	if (setgid(pw->pw_gid)) {								// LCOV_EXCL_LINE
-	    fprintf(stderr, "setgid: %s\n", strerror(errno));	// LCOV_EXCL_LINE
+	if (setgid(pw->pw_gid)) {								
+	    fprintf(stderr, "setgid: %s\n", strerror(errno));	
 	    goto done;
 	}
-	if (setuid(pw->pw_uid)) { 								// LCOV_EXCL_LINE
-	    fprintf(stderr, "setuid: %s\n", strerror(errno));	// LCOV_EXCL_LINE
+	if (setuid(pw->pw_uid)) { 								
+	    fprintf(stderr, "setuid: %s\n", strerror(errno));	
 	    goto done;
 	}
         log_message(LOG_INFO, "running as uid: %d, gid: %d", (int) pw->pw_uid, (int) pw->pw_gid);
     }
     if (smfi_setconn((char *)conf.sendmail_socket) != MI_SUCCESS) {
-	fprintf(stderr, "smfi_setconn failed: %s\n", conf.sendmail_socket); // LCOV_EXCL_LINE
+	fprintf(stderr, "smfi_setconn failed: %s\n", conf.sendmail_socket);
 	goto done;
     }
     if (smfi_register(smfilter) != MI_SUCCESS) {
-	fprintf(stderr, "smfi_register failed\n"); // LCOV_EXCL_LINE
+	fprintf(stderr, "smfi_register failed\n"); 
 	goto done;
     }
     if (!foreground && conf.daemonize && daemon(0, 0)) {
-	fprintf(stderr, "daemonize failed: %s\n", strerror(errno)); // LCOV_EXCL_LINE
+	fprintf(stderr, "daemonize failed: %s\n", strerror(errno)); 
 	goto done;
     }
     if (pthread_mutex_init(&cache_mutex, 0)) {
-	fprintf(stderr, "pthread_mutex_init failed\n"); // LCOV_EXCL_LINE
+	fprintf(stderr, "pthread_mutex_init failed\n");
 	goto done;
     }
+	// LCOV_EXCL_END
     umask(0177);
     if (conf.spf_ttl && !cache_init()) log_message(LOG_ERR, "[ERROR] cache engine init failed");
     ret = smfi_main();

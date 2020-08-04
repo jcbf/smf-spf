@@ -28,7 +28,7 @@ if mt.getreply(conn) ~= SMFIR_CONTINUE then
 end
 -- send envelope macros and sender data
 mt.macro(conn, SMFIC_MAIL, "{i}", "t-verify-malformed")
-mt.macro(conn, SMFIC_MAIL, "{auth_authen}", "username@example.net")
+mt.macro(conn, SMFIC_MAIL, "{verify}", "OK")
 if mt.mailfrom(conn, "<user@underspell.com>") ~= nil then
 	error("mt.mailfrom() failed")
 end
