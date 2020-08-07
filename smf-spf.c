@@ -848,10 +848,9 @@ static sfsistat smf_connect(SMFICTX *ctx, char *name, _SOCK_ADDR *sa) {
     smfi_setpriv(ctx, context);
     if (conf.ipnats && (d_ip = natip_check(inet_addr(host)))) {
 		snprintf(context->addr, sizeof(context->addr), "%li.%li.%li.%li",
-				d_ip >> 24 & 0xff, d_ip >> 16 & 0xff, d_ip >> 8 & 0xff, d_ip & 0xff);
+			d_ip & 0xff, d_ip >> 8 & 0xff, d_ip >> 16 & 0xff, d_ip >> 24 & 0xff);
         log_message(LOG_INFO, "Found  NAT IP address. Original: %s . Final %li (%s)", host, d_ip,context->addr);
-	}
-    if (conf.fixed_ip) 
+	} else if (conf.fixed_ip) 
             strscpy(context->addr, conf.fixed_ip, sizeof(context->addr) - 1);
     else
             strscpy(context->addr, host, sizeof(context->addr) - 1);
