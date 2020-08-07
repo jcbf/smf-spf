@@ -41,6 +41,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <limits.h>
+#include <stdbool.h>
 #include "spf2/spf.h"
 
 #define CONFIG_FILE		"/etc/mail/smfs/smf-spf.conf"
@@ -62,6 +63,7 @@
 #define ADD_RECV_HEADER		0
 #define QUARANTINE		0
 #define DAEMONIZE		1
+#define SKIP_AUTH		true
 #define VERSION			"2.4.5"
 #define REJECT_REASON	"Rejected, look at http://www.openspf.org/why.html?sender=%s&ip=%s&receiver=%s"
 #define SYSLOG_DISABLE	-2
@@ -162,6 +164,7 @@ typedef struct config {
     int daemonize;
     unsigned long spf_ttl;
     char *fixed_ip;
+    bool skip_auth;
     char *reject_reason;
 } config;
 
@@ -454,6 +457,7 @@ static int load_config(void) {
     conf.quarantine = QUARANTINE;
     conf.spf_ttl = SPF_TTL;
     conf.daemonize = DAEMONIZE;
+    conf.skip_auth = SKIP_AUTH;
     if (!(fp = fopen(config_file, "r"))) return 0;
     while (fgets(buf, sizeof(buf) - 1, fp)) {
 	char key[MAXLINE];
@@ -616,6 +620,10 @@ static int load_config(void) {
 	}
 	if (!strcasecmp(key, "addreceivedheader") && !strcasecmp(val, "on")) {
 	    conf.add_recv_spf_header = 1;
+	    continue;
+	}
+	if (!strcasecmp(key, "skipauth") && !strcasecmp(val, "off")) {
+	    conf.skip_auth = false;
 	    continue;
 	}
 	if (!strcasecmp(key, "quarantine") && !strcasecmp(val, "on")) {
@@ -868,7 +876,10 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     SPF_response_t *spf_response = NULL;
     SPF_result_t status;
 
-    if (smfi_getsymval(ctx, "{auth_authen}")) return SMFIS_ACCEPT;
+    if ((conf.skip_auth) && (smfi_getsymval(ctx, "{auth_authen}"))){
+	    log_message(LOG_INFO, "SPF skip : username %s, from=%s", smfi_getsymval(ctx, "{auth_authen}"), context->from);
+		return SMFIS_ACCEPT;
+	}
     if (verify && strcmp(verify, "OK") == 0) return SMFIS_ACCEPT;
     if (*args) strscpy(context->from, *args, sizeof(context->from) - 1);
     if (strstr(context->from, "<>")) {
@@ -1245,36 +1256,38 @@ int main(int argc, char **argv) {
 	struct passwd *pw;
 
 	if ((pw = getpwnam(conf.run_as_user)) == NULL) {
-	    fprintf(stderr, "%s: %s\n", conf.run_as_user, strerror(errno));
+	    fprintf(stderr, "getpwnam %s: %s\n", conf.run_as_user, errno ? strerror(errno) : "User does not exists");
 	    goto done;
 	}
+	// LCOV_EXCL_START
 	setgroups(1, &pw->pw_gid);
-	if (setgid(pw->pw_gid)) {								// LCOV_EXCL_LINE
-	    fprintf(stderr, "setgid: %s\n", strerror(errno));	// LCOV_EXCL_LINE
+	if (setgid(pw->pw_gid)) {								
+	    fprintf(stderr, "setgid: %s\n", strerror(errno));	
 	    goto done;
 	}
-	if (setuid(pw->pw_uid)) { 								// LCOV_EXCL_LINE
-	    fprintf(stderr, "setuid: %s\n", strerror(errno));	// LCOV_EXCL_LINE
+	if (setuid(pw->pw_uid)) { 								
+	    fprintf(stderr, "setuid: %s\n", strerror(errno));	
 	    goto done;
 	}
         log_message(LOG_INFO, "running as uid: %d, gid: %d", (int) pw->pw_uid, (int) pw->pw_gid);
     }
     if (smfi_setconn((char *)conf.sendmail_socket) != MI_SUCCESS) {
-	fprintf(stderr, "smfi_setconn failed: %s\n", conf.sendmail_socket); // LCOV_EXCL_LINE
+	fprintf(stderr, "smfi_setconn failed: %s\n", conf.sendmail_socket);
 	goto done;
     }
     if (smfi_register(smfilter) != MI_SUCCESS) {
-	fprintf(stderr, "smfi_register failed\n"); // LCOV_EXCL_LINE
+	fprintf(stderr, "smfi_register failed\n"); 
 	goto done;
     }
     if (!foreground && conf.daemonize && daemon(0, 0)) {
-	fprintf(stderr, "daemonize failed: %s\n", strerror(errno)); // LCOV_EXCL_LINE
+	fprintf(stderr, "daemonize failed: %s\n", strerror(errno)); 
 	goto done;
     }
     if (pthread_mutex_init(&cache_mutex, 0)) {
-	fprintf(stderr, "pthread_mutex_init failed\n"); // LCOV_EXCL_LINE
+	fprintf(stderr, "pthread_mutex_init failed\n");
 	goto done;
     }
+	// LCOV_EXCL_END
     umask(0177);
     if (conf.spf_ttl && !cache_init()) log_message(LOG_ERR, "[ERROR] cache engine init failed");
     ret = smfi_main();

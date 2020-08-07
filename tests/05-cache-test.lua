@@ -145,11 +145,14 @@ if conn == nil then
 	error("mt.connect() failed")
 end
 
+local start = os.clock()
+while os.clock() - start < 5 do end
+
 -- send connection information
 -- mt.negotiate() is called implicitly
 mt.macro(conn, SMFIC_CONNECT, "j", "mta.name.local")
-mt.echo("Connect from 54.194.147.141")
-if mt.conninfo(conn, "localhost", "54.194.147.141") ~= nil then
+mt.echo("Connect from 54.194.157.134")
+if mt.conninfo(conn, "localhost", "54.194.157.134") ~= nil then
 	error("mt.conninfo() failed")
 end
 if mt.getreply(conn) ~= SMFIR_CONTINUE then

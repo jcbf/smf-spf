@@ -30,12 +30,19 @@ smf-spf: smf-spf.o
 smf-spf.o: smf-spf.c
 	$(CC) $(CFLAGS) -c smf-spf.c
 
-coverage:
+coverage: clean
 	$(CC) $(CFLAGS) -c smf-spf.c -coverage
 	$(CC) -o smf-spf smf-spf.o $(LDFLAGS)  -lgcov
 	strip smf-spf
+
+showcov: 
+	lcov --directory . --capture --output-file coverage.info
+	lcov --remove coverage.info 'tests/*' '/usr/*' --output-file coverage.info
+	genhtml coverage.info --output-directory out
+	lcov --list coverage.info
 clean:
-	rm -f smf-spf.o smf-spf smf.spf.gcno sample coverage.info smf-spf.gc*
+	rm -f smf-spf.o smf-spf smf.spf.gcno sample coverage.info smf-spf.gc* 
+	rm -rf ./out
 
 install:
 	@./install.sh
@@ -54,7 +61,8 @@ install:
 	fi
 	@echo Please, inspect and edit the $(CONFDIR)/smf-spf.conf file.
 
-
+test:
+	./run_tests.sh
 
 
 #
