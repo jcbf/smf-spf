@@ -2,7 +2,7 @@
 mt.echo("SPF ClientIPNAT pass.  Using ./smf-spf-tests-natip.conf")
 
 -- try to start the filter
-mt.startfilter("./smf-spf", "-f", "-c","./smf-spf-tests-natip.conf")
+mt.startfilter("./smf-spf", "-f", "-c","tests/conf/smf-spf-tests-natip.conf")
 
 -- try to connect to it
 conn = mt.connect("inet:2424@127.0.0.1", 40, 0.25)
@@ -13,7 +13,7 @@ end
 -- send connection information
 -- mt.negotiate() is called implicitly
 mt.macro(conn, SMFIC_CONNECT, "j", "mta.name.local")
-if mt.conninfo(conn, "localhost", "127.0.0.1") ~= nil then
+if mt.conninfo(conn, "localhost", "127.0.0.11") ~= nil then
 	error("mt.conninfo() failed")
 end
 if mt.getreply(conn) ~= SMFIR_CONTINUE then

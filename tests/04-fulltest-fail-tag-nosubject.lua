@@ -2,7 +2,7 @@
 mt.echo("SPF fail  test")
 
 -- try to start the filter
-mt.startfilter("./smf-spf", "-f", "-c","./smf-spf-tests-q.conf")
+mt.startfilter("./smf-spf", "-f", "-c","tests/conf/smf-spf-tests-q.conf")
 
 -- try to connect to it
 --conn = mt.connect("unix:./milter.sock", 40, 0.25)

@@ -2,7 +2,7 @@
 mt.echo("SPF skip auth test")
 
 -- try to start the filter
-mt.startfilter("./smf-spf", "-f", "-c","./smf-spf-tests-natip.conf")
+mt.startfilter("./smf-spf", "-f", "-c","tests/conf/smf-spf-tests-natip.conf")
 
 -- try to connect to it
 conn = mt.connect("inet:2424@127.0.0.1", 40, 0.25)
@@ -32,7 +32,7 @@ mt.macro(conn, SMFIC_MAIL, "{auth_authen}", "username@example.net")
 if mt.mailfrom(conn, "<user@underspell.com>") ~= nil then
 	error("mt.mailfrom() failed")
 end
-if mt.getreply(conn) ~= SMFIR_REPLYCODE then
+if mt.getreply(conn) ~= SMFIR_ACCEPT then
 	error("mt.mailfrom() unexpected reply")
 end
 
