@@ -49,6 +49,7 @@
 #define OCONN			"unix:" WORK_SPACE "/smf-spf.sock"
 #define USER			"smfs"
 #define TAG_STRING		"[SPF:fail]"
+#define DEFHOSTNAME		"localhost"
 #define QUARANTINE_BOX		"postmaster"
 #define SYSLOG_FACILITY		LOG_MAIL
 #define SPF_TTL			3600
@@ -64,6 +65,7 @@
 #define QUARANTINE		0
 #define DAEMONIZE		1
 #define SKIP_AUTH		true
+#define SKIP_NDR		false
 #define VERSION			"2.4.5"
 #define REJECT_REASON	"Rejected, look at http://www.openspf.org/why.html?sender=%s&ip=%s&receiver=%s"
 #define SYSLOG_DISABLE	-2
@@ -162,6 +164,7 @@ typedef struct config {
     int quarantine;
     int syslog_facility;
     int daemonize;
+    bool skip_ndr;
     unsigned long spf_ttl;
     char *fixed_ip;
     bool skip_auth;
@@ -458,6 +461,7 @@ static int load_config(void) {
     conf.spf_ttl = SPF_TTL;
     conf.daemonize = DAEMONIZE;
     conf.skip_auth = SKIP_AUTH;
+    conf.skip_ndr = SKIP_NDR;
     if (!(fp = fopen(config_file, "r"))) return 0;
     while (fgets(buf, sizeof(buf) - 1, fp)) {
 	char key[MAXLINE];
@@ -620,6 +624,10 @@ static int load_config(void) {
 	}
 	if (!strcasecmp(key, "addreceivedheader") && !strcasecmp(val, "on")) {
 	    conf.add_recv_spf_header = 1;
+	    continue;
+	}
+	if (!strcasecmp(key, "skipndr") && !strcasecmp(val, "on")) {
+	    conf.skip_ndr = true;
 	    continue;
 	}
 	if (!strcasecmp(key, "skipauth") && !strcasecmp(val, "off")) {
@@ -810,9 +818,8 @@ static sfsistat smf_connect(SMFICTX *ctx, char *name, _SOCK_ADDR *sa) {
         char* p = NULL;
         if (((p = smfi_getsymval(ctx, "{j}"))) == NULL) {
             log_message(LOG_ERR, "[ERROR] can't get MTA-name");
-            return SMFIS_ACCEPT;
-        }
-        if ((authserv_id = strdup(p)) == NULL) {
+            authserv_id = strdup(DEFHOSTNAME);
+        } else if ((authserv_id = strdup(p)) == NULL) {
             log_message(LOG_ERR, "[ERROR] can't save MTA-name"); // LCOV_EXCL_LINE
             return SMFIS_ACCEPT; // LCOV_EXCL_LINE
         }
@@ -875,18 +882,16 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     SPF_response_t *spf_response = NULL;
     SPF_result_t status;
 
-    if ((conf.skip_auth) && (smfi_getsymval(ctx, "{auth_authen}"))){
-	    log_message(LOG_INFO, "SPF skip : username %s, from=%s", smfi_getsymval(ctx, "{auth_authen}"), context->from);
-		return SMFIS_ACCEPT;
-	}
     if (verify && strcmp(verify, "OK") == 0) return SMFIS_ACCEPT;
     if (*args) strscpy(context->from, *args, sizeof(context->from) - 1);
     if (strstr(context->from, "<>")) {
+		if (conf.skip_ndr) {
+			log_message(LOG_INFO, "SPF skip : empty sender, helo=%s, ip=%s",context->helo,context->addr);
+			return SMFIS_ACCEPT;
+		}
 	strtolower(context->helo);
 	snprintf(context->sender, sizeof(context->sender), "postmaster@%s", context->helo);
-    }
-    else
-	if (!address_preparation(context->sender, context->from)) {
+    } else if (!address_preparation(context->sender, context->from)) {
         if (conf.soft_fail) {
                 smfi_setreply(ctx, "450", "4.1.7", "Sender address does not conform to RFC-2821 syntax");
                 return SMFIS_TEMPFAIL;
@@ -894,6 +899,10 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
                 smfi_setreply(ctx, "550", "5.1.7", "Sender address does not conform to RFC-2821 syntax");
                 return SMFIS_REJECT;
         }
+	}
+    if ((conf.skip_auth) && (smfi_getsymval(ctx, "{auth_authen}"))){
+	    log_message(LOG_INFO, "SPF skip : username %s, from=%s", smfi_getsymval(ctx, "{auth_authen}"), context->from);
+		return SMFIS_ACCEPT;
 	}
     if (!strstr(context->from, "<>")) {
 	strtolower(context->sender);
