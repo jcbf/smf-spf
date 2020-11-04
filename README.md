@@ -18,21 +18,27 @@ This was abandoned code and has several bugfixes and enhancements. like:
 - Create a test suite and coverage tests
 - Configurable refuse when SPF is none
 - Reject NDR when there is no SPF policy defined 
+- Skip evaluation for authenticated users
+- Allow source IP replacement for outbound evaluation
 
-[Full Changelog](https://github.com/jcbf/smf-spf/compare/v2.4.4...v2.4.5)
-
-**Merged pull requests:**
-
-- Feature/client ipnat [\#74](https://github.com/jcbf/smf-spf/pull/74) ([jcbf](https://github.com/jcbf))
-ClientIPNAT allows IP address translation of the connecting IP.
-This is particularly useful when you have internal email flows
-and still, have an SPF evaluation.
-
-## [v2.4.5](https://github.com/jcbf/smf-spf/tree/v2.4.5) (2020-07-16)
-
+## [v2.5.0](https://github.com/jcbf/smf-spf/tree/v2.5.0) (2020-10-04)
 
 **Implemented enhancements:**
 
+- Allow logging to file without syslog [\#69](https://github.com/jcbf/smf-spf/issues/69)
+- Implement SpikAuth and SkipNDR[\#75](https://github.com/jcbf/smf-spf/pull/75) ([jcbf](https://github.com/jcbf))
+    Skip Authenticated users when configured to do so. Similar to empty users.
+- Changed tests location [\#78](https://github.com/jcbf/smf-spf/pull/78) ([jcbf](https://github.com/jcbf))
+
+**Fixed bugs:**
+- ClientIPNat will not work if FixedIP is set. [\#76](https://github.com/jcbf/smf-spf/issues/76)
+
+## [v2.4.5](https://github.com/jcbf/smf-spf/tree/v2.4.5) (2020-07-16)
+
+**Implemented enhancements:**
+- Feature/client ipnat [\#74](https://github.com/jcbf/smf-spf/pull/74) ([jcbf](https://github.com/jcbf))
+    ClientIPNAT allows IP address translation of the connecting IP.
+    This is particularly useful when you have internal email flows and still, have an SPF evaluation.
 - use application name in syslog [\#67](https://github.com/jcbf/smf-spf/issues/67)
 
 ## [v2.4.4](https://github.com/jcbf/smf-spf/tree/v2.4.4) (2020-06-21)
