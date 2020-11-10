@@ -71,7 +71,7 @@ if mt.eom_check(conn, MT_HDRCHANGE, "Subject") or
 		string.find(subject, "SPF:fail", 1, true) == nil then
 		error("incorrect Subject")
 	else
-		mt.echo("Fail to find subject tag")
+		mt.echo("Found subject tag: " .. subject)
 	end
 else
 	error("missing Subject")
