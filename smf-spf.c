@@ -221,6 +221,7 @@ static sfsistat smf_envrcpt(SMFICTX *, char **);
 static sfsistat smf_header(SMFICTX *, char *, char *);
 static sfsistat smf_eom(SMFICTX *);
 static sfsistat smf_close(SMFICTX *);
+static char * trim_space(char *str);
 
 static void log_init() {
 	if ( conf.syslog_facility != SYSLOG_DISABLE) 
@@ -466,11 +467,13 @@ static int load_config(void) {
     while (fgets(buf, sizeof(buf) - 1, fp)) {
 	char key[MAXLINE];
 	char val[MAXLINE];
+	char value[MAXLINE];
 	char *p = NULL;
 
 	if ((p = strchr(buf, '#'))) *p = '\0';
 	if (!(strlen(buf))) continue;
-	if (sscanf(buf, "%127s %127s", key, val) != 2) continue;
+	if (sscanf(buf, "%127s %[^\n]s", key, value) != 2) continue;
+	strcpy(val , trim_space(value));
 	if (!strcasecmp(key, "whitelistip")) {
 	    char *slash = NULL;
 	    unsigned short int mask = 32;
@@ -758,7 +761,19 @@ static int to_check(const char *to) {
     }
     return 0;
 }
+static char * trim_space(char *str) {
+    char *end;
+    while (isspace(*str)) { // skip leading whitespace
+        str = str + 1;
+    }
+    end = str + strlen(str) - 1;
+    while (end > str && isspace(*end)) { // remove trailing whitespace
+        end = end - 1;
+    }
 
+    *(end+1) = '\0'; //  write null character*/
+    return str;
+}
 // LCOV_EXCL_START
 static void die(const char *reason) {
 
