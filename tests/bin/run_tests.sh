@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ./smf-spf -h
-for conf in ./tests/fail/* ; do
+for conf in tests/fail/smf-spf-tests-faiillogfile.conf tests/fail/does-not-exists.conf; do
 	echo "#########################################"
 	echo "Running $conf ..."
 	echo "#########################################"
