@@ -65,7 +65,7 @@
 #define QUARANTINE		0
 #define DAEMONIZE		1
 #define SKIP_AUTH		true
-#define VERSION			"2.5.0"
+#define VERSION			"2.5.1"
 #define REJECT_REASON	"Rejected, look at http://www.openspf.org/why.html?sender=%s&ip=%s&receiver=%s"
 #define SYSLOG_DISABLE	-2
 #define SKIP_NDR		false
@@ -923,17 +923,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	strtolower(context->sender);
 	if (conf.froms && from_check(context->sender)) return SMFIS_ACCEPT;
     }
-    if (context->rcpts) {
-	STR *it = context->rcpts, *it_next;
-
-	while (it) {
-	    it_next = it->next;
-	    SAFE_FREE(it->str);
-	    SAFE_FREE(it);
-	    it = it_next;
-	}
-	context->rcpts = NULL;
-    }
+    SAFE_FREE(context->rcpts);
     SAFE_FREE(context->subject);
     context->status = SPF_RESULT_NONE;
     if ((site = smfi_getsymval(ctx, "j")))

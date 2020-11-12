@@ -18,8 +18,21 @@ This was abandoned code and has several bugfixes and enhancements. like:
 - Create a test suite and coverage tests
 - Configurable refuse when SPF is none
 - Reject NDR when there is no SPF policy defined 
+- Added outbound mail related features
 - Skip evaluation for authenticated users
 - Allow source IP replacement for outbound evaluation
+
+
+## [v2.5.1](https://github.com/jcbf/smf-spf/tree/v2.5.1) (2020-11-12)
+[Full Changelog](https://github.com/jcbf/smf-spf/compare/v2.5.0...v2.5.1)
+
+**Fixed bugs:**
+
+- Config values with spaces are ignore [\#82](https://github.com/jcbf/smf-spf/issues/82)
+- Fix travis [\#84](https://github.com/jcbf/smf-spf/pull/84) ([jcbf](https://github.com/jcbf))
+- Added missing commits for skipAuth feature [\#80](https://github.com/jcbf/smf-spf/pull/80) ([jcbf](https://github.com/jcbf))
+
+[Full Changelog](https://github.com/jcbf/smf-spf/compare/2.4.5...v2.5.0)
 
 ## [v2.5.0](https://github.com/jcbf/smf-spf/tree/v2.5.0) (2020-10-04)
 

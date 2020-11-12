@@ -30,8 +30,26 @@ if mt.getreply(conn) ~= SMFIR_CONTINUE then
 	error("mt.mailfrom() unexpected reply")
 end
 
+if mt.rcptto(conn, "<user@example.com>") ~= nil then
+    error("mt.rcptto() failed")
+end
+if mt.getreply(conn) ~= SMFIR_CONTINUE then
+    error("mt.rcptto() unexpected reply")
+end
+if mt.rcptto(conn, "<user2@example.com>") ~= nil then
+    error("mt.rcptto() failed")
+end
+if mt.getreply(conn) ~= SMFIR_CONTINUE then
+    error("mt.rcptto() unexpected reply")
+end
+if mt.rcptto(conn, "<user3@example.com>") ~= nil then
+    error("mt.rcptto() failed")
+end
+if mt.getreply(conn) ~= SMFIR_CONTINUE then
+    error("mt.rcptto() unexpected reply")
+end
+
 -- send headers
--- mt.rcptto() is called implicitly
 if mt.header(conn, "From", "user") ~= nil then
 	error("mt.header(From) failed")
 end

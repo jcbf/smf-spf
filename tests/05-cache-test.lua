@@ -91,7 +91,7 @@ end
 -- send envelope macros and sender data
 -- mt.helo() is called implicitly
 mt.macro(conn, SMFIC_MAIL, "i", "t-verify-malformed")
-if mt.mailfrom(conn, "<user@underspell.com>") ~= nil then
+if mt.mailfrom(conn, "<user2@underspell.com>") ~= nil then
 	error("mt.mailfrom() failed")
 end
 if mt.getreply(conn) ~= SMFIR_CONTINUE then

@@ -1,4 +1,4 @@
-VERSION ?= 2.5
+VERSION = $(shell grep -E '^\#define\s+VERSION' smf-spf.c | cut -d\" -f2)
 
 CC = gcc
 PREFIX = /usr/local
