@@ -1,10 +1,7 @@
 #!/bin/bash
 
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-NOCOLOR='\033[0m' 
 ./smf-spf -h
-for conf in ./tests/fail/* /file/does/not/exists ; do
+for conf in tests/fail/smf-spf-tests-faiillogfile.conf tests/fail/does-not-exists.conf; do
 	echo "#########################################"
 	echo "Running $conf ..."
 	echo "#########################################"
@@ -14,5 +11,5 @@ for testfile in tests/0* ; do
 	echo "#########################################"
 	echo "Running $testfile ..."
 	echo "#########################################"
-	miltertest -s $testfile && echo -e "$GREEN Test OK $NOCOLOR" || echo -e "$RED Test failed $NOCOLOR"
+	miltertest -s $testfile && echo -e "Test OK" || echo -e "Test failed"
 done
