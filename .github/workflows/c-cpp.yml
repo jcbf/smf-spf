@@ -1,0 +1,26 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: create dependecies
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y libmilter-dev libspf2-dev libspf2-2 opendkim-tools lcov
+        gem install coveralls-lcov
+    - name: make
+      run: make
+    - name: make coverage
+      run: make coverage
+    - name: make test
+      run: make test
