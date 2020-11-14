@@ -27,7 +27,7 @@ jobs:
       uses: actions/setup-ruby@v1
       with:
         ruby-version: 2.6.x
-    -name: Coverge 
+    - name: Coverge 
       run: |
         gem install coveralls-lcov  
         lcov --directory . --capture --output-file coverage.info
