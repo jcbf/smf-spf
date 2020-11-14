@@ -17,7 +17,6 @@ jobs:
       run: |
         sudo apt-get update -qq
         sudo apt-get install -y libmilter-dev libspf2-dev libspf2-2 opendkim-tools lcov
-        gem install coveralls-lcov
     - name: make
       run: make
     - name: make coverage
