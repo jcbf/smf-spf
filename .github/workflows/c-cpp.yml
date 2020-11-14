@@ -23,3 +23,23 @@ jobs:
       run: make coverage
     - name: make test
       run: make test
+    - name: Set up Ruby 2.6
+      uses: actions/setup-ruby@v1
+      with:
+        ruby-version: 2.6.x
+      run: |
+        gem install coveralls-lcov  
+        lcov --directory . --capture --output-file coverage.info
+        lcov --remove coverage.info 'tests/*' 'usr/*' --output-file coverage.info
+        lcov --list coverage.info
+        coveralls-lcov --repo-token ${{ secrets.COVERALLS_TOKEN }} coverage.info
+         
+    - name: Build & push Docker image
+      uses: mr-smithers-excellent/docker-build-push@v5
+      with:
+        image: underspell/smf-spf
+        tags: latest
+        registry: docker.io
+        dockerfile: Dockerfile
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
