@@ -2,8 +2,9 @@ smf-spf
 =======
 
 ![GitHub release](https://img.shields.io/github/release/jcbf/smf-spf/all.svg?style=plastic)
-[![Build Status](https://travis-ci.org/jcbf/smf-spf.svg?branch=master)](https://travis-ci.org/jcbf/smf-spf)
-[![Coverage Status](https://coveralls.io/repos/github/jcbf/smf-spf/badge.svg?branch=master)](https://coveralls.io/github/jcbf/smf-spf?branch=master) ![Docker Pulls](https://img.shields.io/docker/pulls/underspell/smf-spf)
+![Build status](https://github.com/jcbf/smf-spf/workflows/C/C++%20CI/badge.svg)
+[![Coverage Status](https://coveralls.io/repos/github/jcbf/smf-spf/badge.svg?branch=master)](https://coveralls.io/github/jcbf/smf-spf?branch=master)
+![Docker Pulls](https://img.shields.io/docker/pulls/underspell/smf-spf)
 
 It's a lightweight, fast and reliable Sendmail/Postfix milter that implements the Sender Policy Framework
 
