@@ -33,7 +33,7 @@ jobs:
         lcov --directory . --capture --output-file coverage.info
         lcov --remove coverage.info 'tests/*' 'usr/*' --output-file coverage.info
         lcov --list coverage.info
-        coveralls-lcov --repo-token ${{ secrets.COVERALLS_TOKEN }} coverage.info
+        coveralls-lcov --repo-token "${{ secrets.COVERALLS_TOKEN }}" coverage.info
          
     - name: Build & push Docker image
       uses: mr-smithers-excellent/docker-build-push@v5
