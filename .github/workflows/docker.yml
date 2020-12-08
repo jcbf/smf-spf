@@ -1,6 +1,7 @@
 name: Build and push docker images
 on:
   release:
+    types: [published, edited]
 env:
   IMAGE_NAME: smf-spf
 jobs:
