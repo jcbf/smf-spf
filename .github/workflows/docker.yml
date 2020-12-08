@@ -1,21 +1,25 @@
 name: Build and push docker images
 on:
   release:
-    types: [created]
 env:
   IMAGE_NAME: smf-spf
 jobs:
-  build:
-    name: Build Image
+  build-image:
+    name: Build the image
     runs-on: ubuntu-18.04
 
     steps:
       - uses: actions/checkout@v2
+      - name: Prepare env
+        if: ${{ !env.ACT }}
+        run: |
+          apt-get update
+          apt-get install -y docker.io
       - name: Build image
         run: docker build . --file Dockerfile --tag $IMAGE_NAME
 
       - name: Log into registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USERNAME}} --password-stdin
 
       - name: Push image
         run: |
