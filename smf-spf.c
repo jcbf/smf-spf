@@ -66,7 +66,7 @@
 #define DAEMONIZE		1
 #define SKIP_AUTH		true
 #define VERSION			"2.5.2"
-#define REJECT_REASON	"Rejected, look at http://www.openspf.org/why.html?sender=%s&ip=%s&receiver=%s"
+#define REJECT_REASON	"Message was rejected during SPF policy evaluation. sender:%1$s client-ip:%2$s"
 #define SYSLOG_DISABLE	-2
 #define SKIP_NDR		false
 
