@@ -20,6 +20,7 @@ jobs:
         name: Build & push Docker image
         with:
           image: underspell/$IMAGE_NAME
-          tags: v1, latest
+          registry: docker.io
+          addLatest: yes
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
