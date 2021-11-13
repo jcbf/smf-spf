@@ -1,9 +1,18 @@
-FROM alpine:latest
+FROM alpine:3.14
+
+
+ADD https://github.com/just-containers/s6-overlay/releases/download/v2.2.0.3/s6-overlay-amd64.tar.gz /tmp/
+
+RUN tar xzf /tmp/s6-overlay-amd64.tar.gz -C / \
+ && rm -rf /tmp/s6-overlay-amd64.tar.gz
+
+ENV S6_KEEP_ENV=1 \
+    S6_CMD_WAIT_FOR_SERVICES=1
+
 
 COPY Makefile smf-spf.c /tmp/src/
 
- # Upgrade existing packages & install runtime dependencies
-RUN  apk update \
+RUN apk update \
  && apk upgrade \
  && apk add --no-cache \
         libspf2 libmilter \
@@ -42,28 +51,9 @@ RUN chmod +x /etc/services.d/*/run \
  && mkdir -p /var/run/smfs \
  && chown -R nobody:nobody /var/run/smfs
 
-
-# Install s6-overlay
-RUN apk add --update --no-cache --virtual .tool-deps \
-        curl \
- && curl -fL -o /tmp/s6-overlay.tar.gz \
-         https://github.com/just-containers/s6-overlay/releases/download/v1.21.7.0/s6-overlay-amd64.tar.gz \
- && tar -xzf /tmp/s6-overlay.tar.gz -C / \
-    \
- # Cleanup unnecessary stuff
- && apk del .tool-deps \
- && rm -rf /var/cache/apk/* \
-           /tmp/*
-
-ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2 \
-    S6_CMD_WAIT_FOR_SERVICES=1
-
-
 RUN chmod +x /etc/services.d/*/run
 
-
 EXPOSE 8890
-
 
 ENTRYPOINT ["/init"]
 
