@@ -1,7 +1,7 @@
-FROM alpine:edge
+FROM alpine:3.14
 
 
-ADD https://github.com/just-containers/s6-overlay/releases/download/v1.18.1.5/s6-overlay-amd64.tar.gz /tmp/
+ADD https://github.com/just-containers/s6-overlay/releases/download/v2.2.0.3/s6-overlay-amd64.tar.gz /tmp/
 
 RUN tar xzf /tmp/s6-overlay-amd64.tar.gz -C / \
  && rm -rf /tmp/s6-overlay-amd64.tar.gz
@@ -12,19 +12,15 @@ ENV S6_KEEP_ENV=1 \
 
 COPY Makefile smf-spf.c /tmp/src/
 
-RUN echo "@community http://dl-cdn.alpinelinux.org/alpine/edge/community" \
-      >> /etc/apk/repositories \
-
- # Upgrade existing packages & install runtime dependencies
- && apk update \
+RUN apk update \
  && apk upgrade \
  && apk add --no-cache \
-        libspf2 libmilter@community \
+        libspf2 libmilter \
 
  # Build smf-spf binary
  && apk add --no-cache --virtual .build-deps \
         build-base \
-        libspf2-dev libmilter-dev@community \
+        libspf2-dev libmilter-dev \
  && cd /tmp/src \
  && make smf-spf \
  && mv smf-spf /usr/local/bin/ \
