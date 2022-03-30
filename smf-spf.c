@@ -65,8 +65,8 @@
 #define QUARANTINE		0
 #define DAEMONIZE		1
 #define SKIP_AUTH		true
-#define VERSION			"2.5.1"
-#define REJECT_REASON	"Rejected, look at http://www.openspf.org/why.html?sender=%s&ip=%s&receiver=%s"
+#define VERSION			"2.5.2"
+#define REJECT_REASON	"Message was rejected during SPF policy evaluation. sender:%1$s client-ip:%2$s"
 #define SYSLOG_DISABLE	-2
 #define SKIP_NDR		false
 
@@ -1136,7 +1136,7 @@ static sfsistat smf_eom(SMFICTX *ctx) {
 			authserv_id, "none", context->sender, context->helo);
 		    break;
 	    }
-	    smfi_insheader(ctx, 1, "Authentication-Results", spf_hdr);
+	    smfi_insheader(ctx, 0, "Authentication-Results", spf_hdr);
 	    free(spf_hdr);
 	}
     }
