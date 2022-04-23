@@ -1,0 +1,2 @@
+tasks:
+  - init: sudo apt-get -y install --no-install-recommends locales build-essential libmilter-dev libspf2-dev opendkim-tools lcov
