@@ -178,6 +178,7 @@ typedef struct facilities {
 
 struct context {
     char addr[64];
+    char identity[16];
     char fqdn[MAXLINE];
     char site[MAXLINE];
     char helo[MAXLINE];
@@ -259,7 +260,6 @@ static void strscpy(register char *dst, register const char *src, size_t size) {
     for (i = 0; i < size && (dst[i] = src[i]) != 0; i++) continue;
     dst[i] = '\0';
 }
-
 static void strtolower(register char *str) {
 
     for (; *str; str++)
@@ -899,6 +899,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 
     if (verify && strcmp(verify, "OK") == 0) return SMFIS_ACCEPT;
     if (*args) strscpy(context->from, *args, sizeof(context->from) - 1);
+	snprintf(context->identity, sizeof(context->identity), "mailfrom");
     if (strstr(context->from, "<>")) {
 		if (conf.skip_ndr) {
 			log_message(LOG_INFO, "SPF skip : empty sender, helo=%s, ip=%s",context->helo,context->addr);
@@ -906,6 +907,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 		}
 	strtolower(context->helo);
 	snprintf(context->sender, sizeof(context->sender), "postmaster@%s", context->helo);
+	snprintf(context->identity, sizeof(context->identity), "helo");
     } else if (!address_preparation(context->sender, context->from)) {
         if (conf.soft_fail) {
                 smfi_setreply(ctx, "450", "4.1.7", "Sender address does not conform to RFC-2821 syntax");
@@ -1145,28 +1147,36 @@ static sfsistat smf_eom(SMFICTX *ctx) {
     if (conf.add_recv_spf_header) {
 	char *spf_hdr = NULL;
 
+	// Make Received-SPF compatible with OpenDMARC 1.4.1
+	char comma_from[MAXLINE];
+	strcpy(comma_from,context->from);
+	for (int j=0; j<strlen(comma_from);j++) {
+		if ((comma_from[j] == '<') || (comma_from[j] == '>'))
+			comma_from[j] = '"';
+	}
+
 	if ((spf_hdr = calloc(1, MAX_HEADER_SIZE))) {
 	    switch (context->status) {
 		case SPF_RESULT_PASS:
-		    snprintf(spf_hdr, MAX_HEADER_SIZE, "Pass (%s: domain of %s\n\tdesignates %s as permitted sender)\n\treceiver=%s; client-ip=%s;\n\tenvelope-from=%s; helo=%s;",
-			context->site, context->sender, context->addr, context->site, context->addr, context->from, context->helo);
+		    snprintf(spf_hdr, MAX_HEADER_SIZE, "Pass (%s: domain of %s\n\tdesignates %s as permitted sender)\n\treceiver=%s; client-ip=%s; identity=%s;\n\tenvelope-from=%s; helo=%s;",
+			context->site, context->sender, context->addr, context->site, context->addr, context->identity, comma_from, context->helo);
 		    break;
 		case SPF_RESULT_FAIL:
-		    snprintf(spf_hdr, MAX_HEADER_SIZE, "Fail (%s: domain of %s\n\tdoes not designate %s as permitted sender)\n\treceiver=%s; client-ip=%s;\n\tenvelope-from=%s; helo=%s;",
-			context->site, context->sender, context->addr, context->site, context->addr, context->from, context->helo);
+		    snprintf(spf_hdr, MAX_HEADER_SIZE, "Fail (%s: domain of %s\n\tdoes not designate %s as permitted sender)\n\treceiver=%s; client-ip=%s; identity=%s;\n\tenvelope-from=%s; helo=%s;",
+			context->site, context->sender, context->addr, context->site, context->addr, context->identity, comma_from, context->helo);
 		    break;
 		case SPF_RESULT_SOFTFAIL:
-		    snprintf(spf_hdr, MAX_HEADER_SIZE, "SoftFail (%s: transitioning domain of %s\n\tdoes not designate %s as permitted sender)\n\treceiver=%s; client-ip=%s;\n\tenvelope-from=%s; helo=%s;",
-			context->site, context->sender, context->addr, context->site, context->addr, context->from, context->helo);
+		    snprintf(spf_hdr, MAX_HEADER_SIZE, "SoftFail (%s: transitioning domain of %s\n\tdoes not designate %s as permitted sender)\n\treceiver=%s; client-ip=%s; identity=%s;\n\tenvelope-from=%s; helo=%s;",
+			context->site, context->sender, context->addr, context->site, context->addr, context->identity, comma_from, context->helo);
 		    break;
 		case SPF_RESULT_NEUTRAL:
-		    snprintf(spf_hdr, MAX_HEADER_SIZE, "Neutral (%s: %s is neither permitted\n\tnor denied by domain of %s)\n\treceiver=%s; client-ip=%s;\n\tenvelope-from=%s; helo=%s;",
-			context->site, context->addr, context->sender, context->site, context->addr, context->from, context->helo);
+		    snprintf(spf_hdr, MAX_HEADER_SIZE, "Neutral (%s: %s is neither permitted\n\tnor denied by domain of %s)\n\treceiver=%s; client-ip=%s; identity=%s;\n\tenvelope-from=%s; helo=%s;",
+			context->site, context->addr, context->sender, context->site, context->addr, context->identity, comma_from, context->helo);
 		    break;
 		case SPF_RESULT_NONE:
 		default:
-		    snprintf(spf_hdr, MAX_HEADER_SIZE, "None (%s: domain of %s\n\tdoes not designate permitted sender hosts)\n\treceiver=%s; client-ip=%s;\n\tenvelope-from=%s; helo=%s;",
-			context->site, context->sender, context->site, context->addr, context->from, context->helo);
+		    snprintf(spf_hdr, MAX_HEADER_SIZE, "None (%s: domain of %s\n\tdoes not designate permitted sender hosts)\n\treceiver=%s; client-ip=%s; identity=%s;\n\tenvelope-from=%s; helo=%s;",
+			context->site, context->sender, context->site, context->addr, context->identity, comma_from, context->helo);
 		    break;
 	    }
 	    smfi_addheader(ctx, "Received-SPF", spf_hdr);
