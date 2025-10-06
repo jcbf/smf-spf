@@ -7,7 +7,14 @@ DATADIR = /var/run/smfs
 CONFDIR = /etc/mail/smfs
 USER = smfs
 GROUP = smfs
-CFLAGS = -O2 -D_REENTRANT -fomit-frame-pointer -I/usr/local/include 
+CFLAGS = -O2 -D_REENTRANT -fomit-frame-pointer -I/usr/local/include -Isrc
+
+# Utility module source files
+UTIL_SRCS = src/utils/string_utils.c src/utils/logging.c src/utils/memory.c src/utils/ip_utils.c
+UTIL_OBJS = $(UTIL_SRCS:.c=.o)
+
+# All object files
+OBJS = smf-spf.o $(UTIL_OBJS)
 
 # Linux
 LDFLAGS = -lmilter -lpthread -L/usr/lib/libmilter -L/usr/local/lib -lspf2
@@ -23,25 +30,32 @@ LDFLAGS = -lmilter -lpthread -L/usr/lib/libmilter -L/usr/local/lib -lspf2
 
 all: smf-spf
 
-smf-spf: smf-spf.o
-	$(CC) -o smf-spf smf-spf.o $(LDFLAGS)
+smf-spf: $(OBJS)
+	$(CC) -o smf-spf $(OBJS) $(LDFLAGS)
 	strip smf-spf
 
 smf-spf.o: smf-spf.c
 	$(CC) $(CFLAGS) -c smf-spf.c
 
+# Pattern rule for utility modules
+src/utils/%.o: src/utils/%.c src/utils/%.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
 coverage: clean
 	$(CC) $(CFLAGS) -c smf-spf.c -coverage
-	$(CC) -o smf-spf smf-spf.o $(LDFLAGS)  -lgcov
+	$(foreach src,$(UTIL_SRCS),$(CC) $(CFLAGS) -c $(src) -coverage -o $(src:.c=.o);)
+	$(CC) -o smf-spf $(OBJS) $(LDFLAGS) -lgcov
 	strip smf-spf
 
-showcov: 
+showcov:
 	lcov --directory . --capture --output-file coverage.info
 	lcov --remove coverage.info 'tests/*' '/usr/*' --output-file coverage.info
 	genhtml coverage.info --output-directory out
 	lcov --list coverage.info
+
 clean:
-	rm -f smf-spf.o smf-spf smf.spf.gcno sample coverage.info smf-spf.gc* 
+	rm -f smf-spf.o smf-spf smf.spf.gcno sample coverage.info smf-spf.gc*
+	rm -f $(UTIL_OBJS) src/utils/*.gcno src/utils/*.gcda
 	rm -rf ./out
 
 install:
