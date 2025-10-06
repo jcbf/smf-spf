@@ -1,4 +1,4 @@
-name: Build,test and deploy
+name: Build, Test and Deploy
 
 on:
   push:
@@ -6,41 +6,83 @@ on:
   pull_request:
     branches: [ master ]
 
-jobs:
-  build:
+permissions:
+  contents: read
 
+jobs:
+  build-and-test:
+    name: Build and Test
     runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v2
-    - name: create dependecies
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
       run: |
         sudo apt-get update -qq
         sudo apt-get install -y libmilter-dev libspf2-dev libspf2-2 opendkim-tools lcov
-    - name: make
+
+    - name: Build binary
       run: make
-    - name: make coverage
+
+    - name: Build with coverage
       run: make coverage
-    - name: make test
+
+    - name: Run tests
       run: make test
-    - name: Set up Ruby 2.6
-      uses: actions/setup-ruby@v1
-      with:
-        ruby-version: 2.6.x
-    - name: Coverge 
+
+    - name: Generate coverage report
       run: |
-        gem install coveralls-lcov  
         lcov --directory . --capture --output-file coverage.info
-        lcov --remove coverage.info 'tests/*' 'usr/*' --output-file coverage.info
+        lcov --remove coverage.info 'tests/*' '/usr/*' --output-file coverage.info
         lcov --list coverage.info
-        coveralls-lcov --repo-token "${{ secrets.COVERALLS_TOKEN }}" coverage.info
-         
-    - name: Build & push Docker image
-      uses: mr-smithers-excellent/docker-build-push@v5
+
+    - name: Upload coverage to Coveralls
+      uses: coverallsapp/github-action@v2
       with:
-        image: underspell/smf-spf
-        tags: latest
-        registry: docker.io
-        dockerfile: Dockerfile
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        file: coverage.info
+        format: lcov
+      continue-on-error: true
+
+  docker-build:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-22.04
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: underspell/smf-spf
+        tags: |
+          type=ref,event=branch
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64
