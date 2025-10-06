@@ -1,70 +1,80 @@
-FROM alpine:latest
+# Multi-stage Dockerfile for smf-spf
+# Build with: docker build -t smf-spf:latest .
 
-COPY Makefile smf-spf.c /tmp/src/
+# ============================================================================
+# Stage 1: Builder
+# ============================================================================
+FROM alpine:3.19 AS builder
 
- # Upgrade existing packages & install runtime dependencies
-RUN  apk update \
- && apk upgrade \
- && apk add --no-cache \
-        libspf2 libmilter \
+LABEL maintainer="smf-spf contributors" \
+      description="Build stage for smf-spf milter"
 
- # Build smf-spf binary
- && apk add --no-cache --virtual .build-deps \
+# Install build dependencies
+RUN apk add --no-cache \
         build-base \
-        libspf2-dev libmilter-dev \
- && cd /tmp/src \
- && make smf-spf \
- && mv smf-spf /usr/local/bin/ \
+        libspf2-dev \
+        libmilter-dev \
+        ca-certificates
 
- # Clean up unnecessary stuff
- && apk del .build-deps \
- && rm -rf /tmp/src \
-           /var/cache/apk/*
+# Copy source files
+WORKDIR /build
+COPY Makefile smf-spf.c ./
 
+# Build the binary (with optimizations)
+RUN make smf-spf && \
+    strip smf-spf && \
+    chmod +x smf-spf
 
-COPY docker/rootfs /
+# ============================================================================
+# Stage 2: Runtime
+# ============================================================================
+FROM alpine:3.19
 
-COPY smf-spf.conf /etc/smfs/
+LABEL maintainer="smf-spf contributors" \
+      description="Lightweight SPF milter for Sendmail/Postfix" \
+      version="2.5.2"
 
-COPY LICENSE COPYING readme README.md /usr/share/doc/smf-spf/
+# Install runtime dependencies only
+RUN apk add --no-cache \
+        libspf2 \
+        libmilter \
+        ca-certificates \
+        tini
 
-RUN chmod +x /etc/services.d/*/run \
+# Copy binary from builder stage
+COPY --from=builder /build/smf-spf /usr/local/bin/smf-spf
 
- # Prepare default configuration
- && sed -i -r 's/^#?Daemonize\s.*$/Daemonize off/g' /etc/smfs/smf-spf.conf \
- && sed -i -r 's/^#?User\s.*$/User nobody/g'        /etc/smfs/smf-spf.conf \
- && sed -i -r 's/^#?Socket\s.*$/Socket inet:8890/g' /etc/smfs/smf-spf.conf \
- && sed -i -r 's/^#?Socket\s.*$/Socket inet:8890/g' /etc/smfs/smf-spf.conf \
- && sed -i -r 's/^#?LogTo\s.*$/LogTo \/dev\/stdout/g' /etc/smfs/smf-spf.conf \
- && sed -i -r 's/^#?Syslog\s.*$/Socket none/g' /etc/smfs/smf-spf.conf \
+# Copy configuration and scripts
+COPY smf-spf.conf /etc/mail/smfs/smf-spf.conf
+COPY docker/rootfs/etc/services.d/syslog/run /etc/services.d/syslog/run
 
- # Prepare directory for unix socket
- && mkdir -p /var/run/smfs \
- && chown -R nobody:nobody /var/run/smfs
+# Copy documentation
+COPY LICENSE COPYING README.md /usr/share/doc/smf-spf/
 
+# Configure for container environment
+RUN sed -i -e 's/^#\?Daemonize.*/Daemonize off/' \
+           -e 's/^#\?User.*/User nobody/' \
+           -e 's/^#\?Socket.*/Socket inet:8890@0.0.0.0/' \
+           -e 's/^#\?LogTo.*/LogTo \/dev\/stdout/' \
+           -e 's/^#\?Syslog.*/Syslog none/' \
+        /etc/mail/smfs/smf-spf.conf \
+    && mkdir -p /var/run/smfs \
+    && chown -R nobody:nobody /var/run/smfs /etc/mail/smfs \
+    && chmod 755 /var/run/smfs \
+    && chmod 644 /etc/mail/smfs/smf-spf.conf
 
-# Install s6-overlay
-RUN apk add --update --no-cache --virtual .tool-deps \
-        curl \
- && curl -fL -o /tmp/s6-overlay.tar.gz \
-         https://github.com/just-containers/s6-overlay/releases/download/v1.21.7.0/s6-overlay-amd64.tar.gz \
- && tar -xzf /tmp/s6-overlay.tar.gz -C / \
-    \
- # Cleanup unnecessary stuff
- && apk del .tool-deps \
- && rm -rf /var/cache/apk/* \
-           /tmp/*
-
-ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2 \
-    S6_CMD_WAIT_FOR_SERVICES=1
-
-
-RUN chmod +x /etc/services.d/*/run
-
-
+# Expose milter port
 EXPOSE 8890
 
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD netstat -an | grep -q :8890 || exit 1
 
-ENTRYPOINT ["/init"]
+# Use tini as init system (proper signal handling)
+ENTRYPOINT ["/sbin/tini", "--"]
 
-CMD ["/usr/local/bin/smf-spf"]
+# Run as nobody user
+USER nobody
+
+# Start the milter
+CMD ["/usr/local/bin/smf-spf", "-f", "-c", "/etc/mail/smfs/smf-spf.conf"]

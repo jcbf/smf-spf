@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # ============================================================================
+  # smf-spf milter service
+  # ============================================================================
+  smf-spf:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: smf-spf:latest
+    container_name: smf-spf
+    restart: unless-stopped
+
+    ports:
+      - "8890:8890"
+
+    volumes:
+      # Mount custom configuration (optional)
+      - ./smf-spf.conf:/etc/mail/smfs/smf-spf.conf:ro
+      # Persist runtime data
+      - smf-spf-data:/var/run/smfs
+
+    environment:
+      # Timezone
+      - TZ=UTC
+
+    networks:
+      - mail-network
+
+    healthcheck:
+      test: ["CMD", "netstat", "-an", "|", "grep", "-q", ":8890"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+  # ============================================================================
+  # Optional: Postfix MTA for testing
+  # ============================================================================
+  postfix:
+    image: boky/postfix:latest
+    container_name: postfix-test
+    restart: unless-stopped
+    profiles:
+      - testing
+
+    ports:
+      - "25:25"
+      - "587:587"
+
+    environment:
+      - ALLOWED_SENDER_DOMAINS=example.com
+      - RELAYHOST=
+      # Configure to use smf-spf milter
+      - SMTPD_MILTERS=inet:smf-spf:8890
+      - NON_SMTPD_MILTERS=inet:smf-spf:8890
+
+    networks:
+      - mail-network
+
+    depends_on:
+      smf-spf:
+        condition: service_healthy
+
+volumes:
+  smf-spf-data:
+    driver: local
+
+networks:
+  mail-network:
+    driver: bridge

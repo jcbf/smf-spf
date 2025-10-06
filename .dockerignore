@@ -1,2 +1,41 @@
-/init
-/tests
+# Git files
+.git
+.gitignore
+.gitattributes
+.gitpod*
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.gcda
+*.gcno
+*.gcov
+coverage.info
+out/
+build-test/
+smf-spf
+sample
+
+# Documentation (except what we copy explicitly)
+*.md
+!README.md
+CLAUDE.md
+*.patch
+
+# Development files
+.vscode/
+.devcontainer/
+.idea/
+
+# Test files and reports
+tests/
+report.xml
+*.log
+
+# Misc
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
