@@ -1,13 +1,16 @@
-smf-spf
-=======
+# smf-spf
 
 ![GitHub release](https://img.shields.io/github/release/jcbf/smf-spf/all.svg?style=plastic)
 [![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fjcbf%2Fsmf-spf%2Fbadge&style=flat)](https://actions-badge.atrox.dev/jcbf/smf-spf/goto)
-[![Coverage Status](https://coveralls.io/repos/github/jcbf/smf-spf/badge.svg?branch=master)](https://coveralls.io/github/jcbf/smf-spf?branch=master) ![Docker Pulls](https://img.shields.io/docker/pulls/underspell/smf-spf)
+[![Coverage Status](https://coveralls.io/repos/github/jcbf/smf-spf/badge.svg?branch=master)](https://coveralls.io/github/jcbf/smf-spf?branch=master)
+![Docker Pulls](https://img.shields.io/docker/pulls/underspell/smf-spf)
+[![License](https://img.shields.io/badge/license-GPL--2.0-blue.svg)](LICENSE)
 
-It's a lightweight, fast and reliable Sendmail/Postfix milter that implements the Sender Policy Framework
+A lightweight, fast and reliable Sendmail/Postfix milter that implements the [Sender Policy Framework (RFC 7208)](https://tools.ietf.org/html/rfc7208).
 
-This was abandoned code and has several bugfixes and enhancements. like:
+## Features
+
+This project revives and significantly enhances the original abandoned code with:
 
 - Caches evaluation results for performance
 - Make MAIL and RCPT limits RFC 5321 compliant  ( both localpart and domain )
@@ -21,6 +24,97 @@ This was abandoned code and has several bugfixes and enhancements. like:
 - Added outbound mail related features
 - Skip evaluation for authenticated users
 - Allow source IP replacement for outbound evaluation
+- Modern Docker support with multi-stage builds
+- Comprehensive test suite with code coverage
+- Active maintenance and security updates
+
+## Quick Start
+
+### Docker (Recommended)
+
+```bash
+docker pull underspell/smf-spf:latest
+docker run -d -p 8890:8890 --name smf-spf underspell/smf-spf:latest
+```
+
+See [DOCKER.md](DOCKER.md) for detailed Docker deployment guide.
+
+### From Source
+
+```bash
+# Install dependencies (Debian/Ubuntu)
+sudo apt-get install libmilter-dev libspf2-dev
+
+# Build
+make
+
+# Install
+sudo make install
+
+# Start the service
+sudo /usr/local/sbin/smf-spf
+```
+
+## Configuration
+
+Edit `/etc/mail/smfs/smf-spf.conf`:
+
+```conf
+# Whitelist internal networks
+WhitelistIP 192.168.0.0/16
+
+# SPF Policy
+RefuseFail on          # Reject on SPF fail
+TagSubject on          # Tag subject on softfail/fail
+AddHeader on           # Add Authentication-Results header
+
+# Caching
+TTL 1h                 # Cache SPF results for 1 hour
+
+# Socket (for MTA connection)
+Socket unix:/var/run/smfs/smf-spf.sock
+```
+
+### Integration
+
+**Postfix** (`/etc/postfix/main.cf`):
+```conf
+smtpd_milters = unix:/var/run/smfs/smf-spf.sock
+non_smtpd_milters = unix:/var/run/smfs/smf-spf.sock
+```
+
+**Sendmail** (`/etc/mail/sendmail.mc`):
+```m4
+INPUT_MAIL_FILTER(`smf-spf', `S=unix:/var/run/smfs/smf-spf.sock, F=T, T=S:4m;R:4m;E:10m')dnl
+```
+
+## Documentation
+
+- [Docker Deployment Guide](DOCKER.md)
+- [Contributing Guidelines](CONTRIBUTING.md)
+- [Configuration Reference](smf-spf.conf)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Refactoring Plan](REFACTORING_PLAN.md) - Future code modernization roadmap
+
+## Requirements
+
+- **libmilter** (from Sendmail)
+- **libSPF2** (v1.2.5 or later)
+- **pthread** support
+- **miltertest** (optional, for testing)
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/jcbf/smf-spf/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/jcbf/smf-spf/discussions)
+
+## Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## License
+
+This project is licensed under the GNU General Public License v2.0 - see [LICENSE](LICENSE) for details.
 
 
 ## [v2.5.1](https://github.com/jcbf/smf-spf/tree/v2.5.1) (2020-11-12)
