@@ -1,0 +1,48 @@
+diff -ru --exclude Makefile smf-spf-2.4.3.orig/readme smf-spf-2.4.3/readme
+--- smf-spf-2.4.3.orig/readme	2020-03-26 00:45:26.000000000 +0100
++++ smf-spf-2.4.3/readme	2020-06-15 15:13:35.958000000 +0200
+@@ -46,10 +46,10 @@
+ 
+   Add these lines to your Sendmail configuration file (usually sendmail.mc):
+ define(`confMILTER_MACROS_HELO', confMILTER_MACROS_HELO`, {verify}')dnl
+-INPUT_MAIL_FILTER(`smf-spf', `S=unix:/var/run/smfs/smf-spf.sock, T=S:30s;R:1m')dnl
++INPUT_MAIL_FILTER(`smf-spf', `S=unix:/run/smfs/smf-spf.sock, T=S:30s;R:1m')dnl
+ 
+-IMPORTANT: make sure that /var/run is not a group writable directory! If so,
+-or chmod 755 /var/run, or if it's impossible switch to another directory.
++IMPORTANT: make sure that /run is not a group writable directory! If so,
++or chmod 755 /run, or if it's impossible switch to another directory.
+ 
+ IMPORTANT: make sure that libmilter is compiled with BROKEN_PTHREAD_SLEEP defined.
+ If this symbol is not defined, libmilter will use sleep() in signal-handler thread,
+@@ -132,4 +132,4 @@
+ http://sourceforge.net/projects/smfs/
+ http://kurmanin.info/
+ 
+-    
+\ No newline at end of file
++    
+diff -ru --exclude Makefile smf-spf-2.4.3.orig/smf-spf.c smf-spf-2.4.3/smf-spf.c
+--- smf-spf-2.4.3.orig/smf-spf.c	2020-03-26 00:45:26.000000000 +0100
++++ smf-spf-2.4.3/smf-spf.c	2020-06-15 15:16:46.184000000 +0200
+@@ -43,7 +43,7 @@
+ #include "spf2/spf.h"
+ 
+ #define CONFIG_FILE		"/etc/mail/smfs/smf-spf.conf"
+-#define WORK_SPACE		"/var/run/smfs"
++#define WORK_SPACE		"/run/smfs"
+ #define OCONN			"unix:" WORK_SPACE "/smf-spf.sock"
+ #define USER			"smfs"
+ #define TAG_STRING		"[SPF:fail]"
+diff -ru --exclude Makefile smf-spf-2.4.3.orig/smf-spf.conf smf-spf-2.4.3/smf-spf.conf
+--- smf-spf-2.4.3.orig/smf-spf.conf	2020-03-26 00:45:26.000000000 +0100
++++ smf-spf-2.4.3/smf-spf.conf	2020-06-15 15:24:23.758000000 +0200
+@@ -157,7 +157,7 @@
+ #
+ # Default: unix:/var/run/smfs/smf-spf.sock
+ #
+-#Socket		unix:/var/run/smfs/smf-spf.sock
++#Socket		unix:/run/smfs/smf-spf.sock
+ 
+ # Facility for logging via Syslog daemon
+ #

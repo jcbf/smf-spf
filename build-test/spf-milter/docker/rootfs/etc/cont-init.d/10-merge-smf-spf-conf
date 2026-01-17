@@ -1,0 +1,19 @@
+#!/bin/sh
+
+
+SMFSPF_DROPINS_DIR=${SMFSPF_DROPINS_DIR:=/etc/smfs}
+SMFSPF_CONF_FILE=${SMFSPF_CONF_FILE:=/etc/mail/smfs/smf-spf.conf}
+
+
+write_cfg_file() {
+    echo -e "\n\n#\n# $1\n#\n" >> $SMFSPF_CONF_FILE
+    cat $1                     >> $SMFSPF_CONF_FILE
+}
+
+
+write_cfg_file $SMFSPF_DROPINS_DIR/smf-spf.conf
+
+[ ! -d $SMFSPF_DROPINS_DIR/conf.d ] && exit 0
+for f in `find $SMFSPF_DROPINS_DIR/conf.d -type f | sort`; do
+    write_cfg_file $f
+done

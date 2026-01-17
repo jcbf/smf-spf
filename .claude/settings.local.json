@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker run:*)",
+      "Bash(make test:*)",
+      "Bash(docker inspect:*)",
+      "Bash(awk:*)",
+      "Bash(gh issue view:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(make:*)",
+      "Bash(git add:*)",
+      "Bash(gh issue create:*)",
+      "Bash(gh label:*)",
+      "Bash(git commit:*)",
+      "Bash(pkg-config:*)",
+      "Bash(brew:*)",
+      "Bash(brew install:*)",
+      "Bash(gcc:*)",
+      "Bash(ls:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

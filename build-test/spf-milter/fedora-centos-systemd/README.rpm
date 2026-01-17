@@ -1,0 +1,57 @@
+=================================
+Quick guide to installing smf-spf
+=================================
+
+Make sure you have the following RPMs installed:
+1. sendmail    (your MTA)
+2. sendmail-cf (needed to reconfigure sendmail)
+3. libspf2     (library supporting smf-spf)
+4. smf-spf     (the milter itself)
+
+Configuring smf-spf
+===================
+
+The configuration file is /etc/mail/smfs/smf-spf.conf
+
+Start the milter using `service smf-spf start'.
+
+To ensure that the milter starts on every reboot, use `chkconfig smf-spf on'.
+
+Configuring sendmail
+====================
+
+You need to tweak the sendmail.mc file in /etc/mail
+
+If you are using sendmail 8.12.x compiled without -D_FFR_MILTER_PERDAEMON
+(this is the case with the stock Red Hat/Fedora sendmails), then the SPF
+checks will be done on all of your daemons, including the MSA daemon. This
+shouldn't be a problem, but is a bit wasteful as message submission via
+the MSA should always be authenticated, in which case no SPF checks need
+be done at all.
+
+Add the following to your sendmail.mc (before any MAILER lines):
+
+define(`confMILTER_MACROS_HELO', confMILTER_MACROS_HELO`, {verify}')dnl
+INPUT_MAIL_FILTER(`smf-spf', `S=unix:/run/smfs/smf-spf.sock, F=T, T=S:30s;R:1m')dnl
+DAEMON_OPTIONS(`Port=smtp, Name=MTA')dnl
+DAEMON_OPTIONS(`Port=submission, Name=MSA, M=Ea')dnl
+
+This gives you MTA and MSA (auth required, port 587) daemons, both using spfmilter.
+
+If your version of sendmail is compiled with -D_FFR_MILTER_PERDAEMON or you
+are using sendmail 8.13.x or later then you can limit the milter to run only
+on the MTA daemon:
+
+FEATURE(`no_default_msa')dnl
+MAIL_FILTER(`smf-spf', `S=unix:/run/smfs/smf-spf.sock, F=T, T=S:30s;R:1m')dnl
+DAEMON_OPTIONS(`Port=smtp, Name=MTA, InputMailFilters=smf-spf')dnl
+DAEMON_OPTIONS(`Port=submission, Name=MSA, M=Ea')dnl
+
+Note: the `F=T,' part of the MAIL_FILTER causes incoming connections to be tempfailed (4xx)
+if the milter is not available. If this parameter is omitted and the milter is unavailable,
+sendmail will behave as if no filter is defined.
+
+Having made these changes to sendmail.mc, use `make' to generate a new sendmail.cf.
+Then use `service sendmail reload' to have sendmail use the new configuration and start
+using smf-spf.
+
