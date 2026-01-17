@@ -7,11 +7,20 @@ DATADIR = /var/run/smfs
 CONFDIR = /etc/mail/smfs
 USER = smfs
 GROUP = smfs
-CFLAGS = -O2 -D_REENTRANT -fomit-frame-pointer -I/usr/local/include -Isrc
+CFLAGS = -O2 -D_REENTRANT -fomit-frame-pointer -Isrc -I/usr/local/include
 
 # Utility module source files
 UTIL_SRCS = src/utils/string_utils.c src/utils/logging.c src/utils/memory.c src/utils/ip_utils.c
 UTIL_OBJS = $(UTIL_SRCS:.c=.o)
+
+# Unit test files
+UNIT_TEST_SRCS = tests/unit/test_string_utils.c tests/unit/test_ip_utils.c tests/unit/test_memory.c tests/unit/test_logging.c
+UNIT_TEST_OBJS = $(UNIT_TEST_SRCS:.c=.o)
+UNIT_TEST_RUNNER = tests/unit/run_unit_tests.o
+
+# Check framework flags
+CHECK_CFLAGS = $(shell pkg-config --cflags check)
+CHECK_LDFLAGS = $(shell pkg-config --libs check)
 
 # All object files
 OBJS = smf-spf.o $(UTIL_OBJS)
@@ -39,7 +48,7 @@ smf-spf.o: smf-spf.c
 
 # Pattern rule for utility modules
 src/utils/%.o: src/utils/%.c src/utils/%.h
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) -O2 -D_REENTRANT -fomit-frame-pointer -Isrc -c $< -o $@
 
 coverage: clean
 	$(CC) $(CFLAGS) -c smf-spf.c -coverage
@@ -56,7 +65,20 @@ showcov:
 clean:
 	rm -f smf-spf.o smf-spf smf.spf.gcno sample coverage.info smf-spf.gc*
 	rm -f $(UTIL_OBJS) src/utils/*.gcno src/utils/*.gcda
+	rm -f $(UNIT_TEST_OBJS) $(UNIT_TEST_RUNNER) tests/unit/run_unit_tests
 	rm -rf ./out
+
+# Unit test compilation rules
+tests/unit/%.o: tests/unit/%.c
+	$(CC) -O2 -D_REENTRANT -Isrc -Isrc/utils $(CHECK_CFLAGS) -c $< -o $@
+
+# Unit test runner
+tests/unit/run_unit_tests: $(UNIT_TEST_OBJS) $(UNIT_TEST_RUNNER) $(UTIL_OBJS)
+	$(CC) -o $@ $(UNIT_TEST_OBJS) $(UNIT_TEST_RUNNER) $(UTIL_OBJS) $(CHECK_LDFLAGS)
+
+# Run unit tests
+unit-tests: tests/unit/run_unit_tests
+	./tests/unit/run_unit_tests
 
 install:
 	@./install.sh
