@@ -61,6 +61,7 @@ src/config/%.o: src/config/%.c src/config/%.h
 coverage: clean
 	$(CC) $(CFLAGS) -c smf-spf.c -coverage
 	$(foreach src,$(UTIL_SRCS),$(CC) $(CFLAGS) -c $(src) -coverage -o $(src:.c=.o);)
+	$(foreach src,$(CONFIG_SRCS),$(CC) $(CFLAGS) -c $(src) -coverage -o $(src:.c=.o);)
 	$(CC) -o smf-spf $(OBJS) $(LDFLAGS) -lgcov
 	strip smf-spf
 

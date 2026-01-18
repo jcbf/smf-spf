@@ -379,7 +379,7 @@ int config_load(const char *filepath) {
 
             if ((sep = strchr(val, ':'))) {
                 *sep++ = '\0';
-                if (*sep && !regexec(&re_ipv4, sep, 0, NULL, 0)) {
+                if (*sep) {
                     if ((d_ip = inet_addr(sep)) == 0xffffffff) {
                         syslog(LOG_ERR, "[CONFIG] Invalid NAT destination IP: %s", sep);
                         continue;

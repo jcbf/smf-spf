@@ -19,13 +19,7 @@
 #define CONFIG_H
 
 #include <stdio.h>
-
-/* Manual bool definition to avoid system header issues */
-#if !defined(__cplusplus) && !defined(__STDC_VERSION__)
-typedef int bool;
-#define false 0
-#define true 1
-#endif
+#include <stdbool.h>
 
 /* Data Structures */
 typedef struct CIDR {
