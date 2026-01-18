@@ -1,0 +1,36 @@
+#!/bin/sh
+# Start/stop/restart the smf-spf milter.
+#
+# Written for Slackware Linux.
+
+smfspf_start() {
+  if [ -x /usr/local/sbin/smf-spf ]; then
+    echo -n "Starting smf-spf milter:  "
+    echo -n "/usr/local/sbin/smf-spf "
+    /usr/local/sbin/smf-spf
+  fi
+}
+
+smfspf_stop() {
+  killall smf-spf 2> /dev/null
+}
+
+smfspf_restart() {
+  smfspf_stop
+  sleep 1
+  smfspf_start
+}
+
+case "$1" in
+'start')
+  smfspf_start
+  ;;
+'stop')
+  smfspf_stop
+  ;;
+'restart')
+  smfspf_restart
+  ;;
+*)
+  echo "usage $0 start|stop|restart"
+esac

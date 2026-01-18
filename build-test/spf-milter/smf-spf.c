@@ -43,7 +43,6 @@
 #include <limits.h>
 #include <stdbool.h>
 #include "spf2/spf.h"
-#include "config/config.h"
 
 #define CONFIG_FILE		"/etc/mail/smfs/smf-spf.conf"
 #define WORK_SPACE		"/var/run/smfs"
@@ -55,7 +54,6 @@
 #define SYSLOG_FACILITY		LOG_MAIL
 #define SPF_TTL			3600
 #define RELAXED_LOCALPART	0
-#define BEST_GUESS		1
 #define REFUSE_FAIL		1
 #define REFUSE_NONE		0
 #define REFUSE_NONE_HELO		0
@@ -67,12 +65,10 @@
 #define QUARANTINE		0
 #define DAEMONIZE		1
 #define SKIP_AUTH		true
-#define VERSION			"2.5.2"
-#define REJECT_REASON	"Message was rejected during SPF policy evaluation. sender:%1$s client-ip:%2$s"
+#define VERSION			"2.5.1"
+#define REJECT_REASON	"Rejected, look at http://www.openspf.org/why.html?sender=%s&ip=%s&receiver=%s"
 #define SYSLOG_DISABLE	-2
 #define SKIP_NDR		false
-#define SPF_GUESS_RECORD "v=spf1 a/24 mx/24 ptr ?all"
-#define SPF_GUESS_TEXT " (SPF best guess)"
 
 #define MAX_HEADER_SIZE		2048
 #define MAXLINE			258
@@ -128,7 +124,57 @@ typedef struct cache_item {
     struct cache_item *next;
 } cache_item;
 
-/* Struct definitions now provided by config module */
+typedef struct CIDR {
+    unsigned long ip;
+    unsigned short int mask;
+    struct CIDR *next;
+} CIDR;
+
+typedef struct IPNAT {
+    unsigned long srcip;
+    unsigned long destip;
+    struct IPNAT *next;
+} IPNAT;
+
+typedef struct STR {
+    char *str;
+    struct STR *next;
+} STR;
+
+typedef struct config {
+    char *tag;
+    char *quarantine_box;
+    FILE *log_file;
+    char *run_as_user;
+    char *sendmail_socket;
+    IPNAT *ipnats;
+    CIDR *cidrs;
+    STR *ptrs;
+    STR *froms;
+    STR *tos;
+    int relaxed_localpart;
+    int refuse_fail;
+    int refuse_none;
+    int refuse_none_helo;
+    int soft_fail;
+    int accept_temperror;
+    int tag_subject;
+    int add_header;
+    int add_recv_spf_header;
+    int quarantine;
+    int syslog_facility;
+    int daemonize;
+    bool skip_ndr;
+    unsigned long spf_ttl;
+    char *fixed_ip;
+    bool skip_auth;
+    char *reject_reason;
+} config;
+
+typedef struct facilities {
+    char *name;
+    int facility;
+} facilities;
 
 struct context {
     char addr[64];
@@ -142,20 +188,31 @@ struct context {
     char recipient[MAXLINE];
     char key[MAXLINE];
     char *subject;
-    int is_best_guess;
     STR *rcpts;
     SPF_result_t status;
 };
 
-/* IPv4 regex and facilities moved to config module */
+static regex_t re_ipv4;
 static cache_item **cache = NULL;
 static const char *config_file = CONFIG_FILE;
 static int foreground = 0;
-/* conf is now extern from config module */
+static config conf;
 static char *daemon_name;
 static char hostname[HOST_NAME_MAX+1];
 static pid_t mypid = 0;
 static pthread_mutex_t cache_mutex;
+static facilities syslog_facilities[] = {
+    { "daemon", LOG_DAEMON },
+    { "mail", LOG_MAIL },
+    { "local0", LOG_LOCAL0 },
+    { "local1", LOG_LOCAL1 },
+    { "local2", LOG_LOCAL2 },
+    { "local3", LOG_LOCAL3 },
+    { "local4", LOG_LOCAL4 },
+    { "local5", LOG_LOCAL5 },
+    { "local6", LOG_LOCAL6 },
+    { "local7", LOG_LOCAL7 }
+};
 static char *authserv_id = NULL;
 
 static sfsistat smf_connect(SMFICTX *, char *, _SOCK_ADDR *);
@@ -209,7 +266,31 @@ static void strtolower(register char *str) {
 	if (isascii(*str) && isupper(*str)) *str = tolower(*str);
 }
 
-/* translate() function moved to config module as config_translate_time() */
+static unsigned long translate(char *value) {
+    unsigned long unit;
+    size_t len = strlen(value);
+
+    switch (value[len - 1]) {
+	case 'm':
+	case 'M':
+	    unit = 60;
+	    value[len - 1] = '\0';
+	    break;
+	case 'h':
+	case 'H':
+	    unit = 3600;
+	    value[len - 1] = '\0';
+	    break;
+	case 'd':
+	case 'D':
+	    unit = 86400;
+	    value[len - 1] = '\0';
+	    break;
+	default:
+	    return atol(value);
+    }
+    return (atol(value) * unit);
+}
 
 static unsigned long hash_code(register const unsigned char *key) {
     register unsigned long hash = 0;
@@ -295,8 +376,391 @@ static void cache_put(const char *key, unsigned long ttl, SPF_result_t status) {
     }
 }
 
-/* Configuration functions are now provided by src/config/config.c */
+static void free_config(void) {
 
+    SAFE_FREE(conf.tag);
+    SAFE_FREE(conf.quarantine_box);
+    SAFE_FREE(conf.run_as_user);
+    SAFE_FREE(conf.sendmail_socket);
+    SAFE_FREE(conf.fixed_ip);
+    SAFE_FREE(conf.reject_reason);
+    if (conf.log_file != NULL)
+		fclose(conf.log_file);
+
+    if (conf.ipnats) {
+	IPNAT *it = conf.ipnats, *it_next;
+		while (it) {
+			it_next = it->next;
+			SAFE_FREE(it);
+			it = it_next;
+		}
+    }
+    if (conf.cidrs) {
+	CIDR *it = conf.cidrs, *it_next;
+
+	while (it) {
+	    it_next = it->next;
+	    SAFE_FREE(it);
+	    it = it_next;
+	}
+    }
+    if (conf.ptrs) {
+	STR *it = conf.ptrs, *it_next;
+
+	while (it) {
+	    it_next = it->next;
+	    SAFE_FREE(it->str);
+	    SAFE_FREE(it);
+	    it = it_next;
+	}
+    }
+    if (conf.froms) {
+	STR *it = conf.froms, *it_next;
+
+	while (it) {
+	    it_next = it->next;
+	    SAFE_FREE(it->str);
+	    SAFE_FREE(it);
+	    it = it_next;
+	}
+    }
+    if (conf.tos) {
+	STR *it = conf.tos, *it_next;
+
+	while (it) {
+	    it_next = it->next;
+	    SAFE_FREE(it->str);
+	    SAFE_FREE(it);
+	    it = it_next;
+	}
+    }
+}
+
+
+static int load_config(void) {
+    FILE *fp;
+    char buf[2 * MAXLINE];
+
+    conf.tag = strdup(TAG_STRING);
+    conf.quarantine_box = strdup(QUARANTINE_BOX);
+    conf.log_file = NULL;
+    conf.fixed_ip = NULL;
+    conf.reject_reason = strdup(REJECT_REASON);
+    conf.run_as_user = strdup(USER);
+    conf.sendmail_socket = strdup(OCONN);
+    conf.syslog_facility = SYSLOG_FACILITY;
+    conf.refuse_fail = REFUSE_FAIL;
+    conf.relaxed_localpart = RELAXED_LOCALPART;
+    conf.refuse_none = REFUSE_NONE;
+    conf.refuse_none_helo = REFUSE_NONE_HELO;
+    conf.soft_fail = SOFT_FAIL;
+    conf.accept_temperror = ACCEPT_PERMERR;
+    conf.tag_subject = TAG_SUBJECT;
+    conf.add_header = ADD_HEADER;
+    conf.add_recv_spf_header = ADD_RECV_HEADER;
+    conf.quarantine = QUARANTINE;
+    conf.spf_ttl = SPF_TTL;
+    conf.daemonize = DAEMONIZE;
+    conf.skip_auth = SKIP_AUTH;
+    conf.skip_ndr = SKIP_NDR;
+    if (!(fp = fopen(config_file, "r"))) return 0;
+    while (fgets(buf, sizeof(buf) - 1, fp)) {
+	char key[MAXLINE];
+	char val[MAXLINE];
+	char value[MAXLINE];
+	char *p = NULL;
+
+	if ((p = strchr(buf, '#'))) *p = '\0';
+	if (!(strlen(buf))) continue;
+	if (sscanf(buf, "%127s %[^\n]s", key, value) != 2) continue;
+	strcpy(val , trim_space(value));
+	if (!strcasecmp(key, "whitelistip")) {
+	    char *slash = NULL;
+	    unsigned short int mask = 32;
+
+	    if ((slash = strchr(val, '/'))) {
+		*slash = '\0';
+		if ((mask = atoi(++slash)) > 32) mask = 32;
+	    }
+	    if (val[0] && !regexec(&re_ipv4, val, 0, NULL, 0)) {
+		CIDR *it = NULL;
+		unsigned long ip;
+
+		if ((ip = inet_addr(val)) == 0xffffffff) continue;
+		if (!conf.cidrs)
+		    conf.cidrs = (CIDR *) calloc(1, sizeof(CIDR));
+		else
+		    if ((it = (CIDR *) calloc(1, sizeof(CIDR)))) {
+			it->next = conf.cidrs;
+			conf.cidrs = it;
+		    }
+		if (conf.cidrs) {
+		    conf.cidrs->ip = ip;
+		    conf.cidrs->mask = mask;
+		}
+	    }
+	    continue;
+	}
+	if (!strcasecmp(key, "clientipnat")) {
+		char *sep = NULL;
+		unsigned long d_ip;
+
+	    if ((sep = strchr(val, ':'))) {
+			*sep++ = '\0';
+			if (*sep && !regexec(&re_ipv4, sep, 0, NULL, 0)) {
+				if ((d_ip = inet_addr(sep)) == 0xffffffff) {
+					log_message(LOG_ERR, "[CONFIG ERROR] ignore nat dest error:%s (entry:%s)", sep, buf);
+					continue;
+				} 
+			} else {
+				log_message(LOG_ERR, "[CONFIG ERROR] invalid destination ip (%s)", sep);
+				continue;
+			}
+	    } else {
+			log_message(LOG_ERR, "[CONFIG ERROR] invalid entry(%s). Must be src_ip:dest:ip", val);
+			continue;
+		}
+	    if (val[0] && !regexec(&re_ipv4, val, 0, NULL, 0)) {
+			IPNAT *it = NULL;
+			unsigned long s_ip;
+
+			if ((s_ip = inet_addr(val)) == 0xffffffff) {
+					log_message(LOG_ERR, "[CONFIG ERROR] ignore nat src error:%s (entry:%s/int:%li)", val, buf,s_ip);
+					continue;
+			} 
+			if (!conf.ipnats)
+				conf.ipnats = (IPNAT *) calloc(1, sizeof(IPNAT));
+			else
+				if ((it = (IPNAT *) calloc(1, sizeof(IPNAT)))) {
+					it->next = conf.ipnats;
+					conf.ipnats = it;
+				}
+			if (conf.ipnats) {
+				conf.ipnats->srcip = s_ip;
+				conf.ipnats->destip = d_ip;
+			}
+		} else 
+			log_message(LOG_ERR, "[CONFIG ERROR] entry(%s) is not a valid IP address", val);
+	    continue;
+	}
+	if (!strcasecmp(key, "whitelistptr")) {
+	    STR *it = NULL;
+
+	    if (!conf.ptrs)
+		conf.ptrs = (STR *) calloc(1, sizeof(STR));
+	    else
+		if ((it = (STR *) calloc(1, sizeof(STR)))) {
+		    it->next = conf.ptrs;
+		    conf.ptrs = it;
+		}
+	    if (conf.ptrs && !conf.ptrs->str) conf.ptrs->str = strdup(val);
+	    continue;
+	}
+	if (!strcasecmp(key, "whitelistfrom")) {
+	    STR *it = NULL;
+
+	    if (!conf.froms)
+		conf.froms = (STR *) calloc(1, sizeof(STR));
+	    else
+		if ((it = (STR *) calloc(1, sizeof(STR)))) {
+		    it->next = conf.froms;
+		    conf.froms = it;
+		}
+	    if (conf.froms && !conf.froms->str) {
+		strtolower(val);
+		conf.froms->str = strdup(val);
+	    }
+	    continue;
+	}
+	if (!strcasecmp(key, "whitelistto")) {
+	    STR *it = NULL;
+
+	    if (!conf.tos)
+		conf.tos = (STR *) calloc(1, sizeof(STR));
+	    else
+		if ((it = (STR *) calloc(1, sizeof(STR)))) {
+		    it->next = conf.tos;
+		    conf.tos = it;
+		}
+	    if (conf.tos && !conf.tos->str) {
+		strtolower(val);
+		conf.tos->str = strdup(val);
+	    }
+	    continue;
+	}
+	if (!strcasecmp(key, "accepttemperror") && !strcasecmp(val, "off")) {
+	    conf.accept_temperror = 0;
+	    continue;
+	}
+	if (!strcasecmp(key, "softfail") && !strcasecmp(val, "on")) {
+	    conf.soft_fail = 1;
+	    continue;
+	}
+	if (!strcasecmp(key, "refusespfnone") && !strcasecmp(val, "on")) {
+	    conf.refuse_none = 1;
+	    continue;
+	}
+	if (!strcasecmp(key, "refusespfnonehelo") && !strcasecmp(val, "on")) {
+	    conf.refuse_none_helo = 1;
+	    continue;
+	}
+	if (!strcasecmp(key, "relaxedlocalpart") && !strcasecmp(val, "on")) {
+	    conf.relaxed_localpart= 1;
+	    continue;
+	}
+	if (!strcasecmp(key, "refusefail") && !strcasecmp(val, "off")) {
+	    conf.refuse_fail = 0;
+	    continue;
+	}
+	if (!strcasecmp(key, "tagsubject") && !strcasecmp(val, "off")) {
+	    conf.tag_subject = 0;
+	    continue;
+	}
+	if (!strcasecmp(key, "tag")) {
+	    SAFE_FREE(conf.tag);
+	    conf.tag = strdup(val);
+	    continue;
+	}
+	if (!strcasecmp(key, "addheader") && !strcasecmp(val, "off")) {
+	    conf.add_header = 0;
+	    continue;
+	}
+	if (!strcasecmp(key, "addreceivedheader") && !strcasecmp(val, "on")) {
+	    conf.add_recv_spf_header = 1;
+	    continue;
+	}
+	if (!strcasecmp(key, "skipndr") && !strcasecmp(val, "on")) {
+	    conf.skip_ndr = true;
+	    continue;
+	}
+	if (!strcasecmp(key, "skipauth") && !strcasecmp(val, "off")) {
+	    conf.skip_auth = false;
+	    continue;
+	}
+	if (!strcasecmp(key, "quarantine") && !strcasecmp(val, "on")) {
+	    conf.quarantine = 1;
+	    continue;
+	}
+	if (!strcasecmp(key, "daemonize") && !strcasecmp(val, "off")) {
+	    conf.daemonize = 0;
+	    continue;
+	}
+	if (!strcasecmp(key, "fixedclientip")) {
+	    conf.fixed_ip = strdup(val);
+	    continue;
+	}
+	if (!strcasecmp(key, "rejectreason")) {
+	    SAFE_FREE(conf.reject_reason);
+	    conf.reject_reason = strdup(val);
+	    continue;
+	}
+	if (!strcasecmp(key, "logto")) {
+			if (!(conf.log_file = fopen(val,"a"))){
+				fprintf (stderr,"Error: Can't open file %s to write. (errno: %d - %s)\n",
+					val,errno,strerror(errno));
+				return 0;
+			}
+	    continue;
+	}
+	if (!strcasecmp(key, "quarantinebox")) {
+	    SAFE_FREE(conf.quarantine_box);
+	    conf.quarantine_box = strdup(val);
+	    continue;
+	}
+	if (!strcasecmp(key, "authservid")) {
+	    authserv_id = strdup(val);
+	    continue;
+	}
+	if (!strcasecmp(key, "ttl")) {
+	    conf.spf_ttl = translate(val);
+	    continue;
+	}
+	if (!strcasecmp(key, "user")) {
+	    SAFE_FREE(conf.run_as_user);
+	    conf.run_as_user = strdup(val);
+	    continue;
+	}
+	if (!strcasecmp(key, "socket")) {
+	    SAFE_FREE(conf.sendmail_socket);
+	    conf.sendmail_socket = strdup(val);
+	    continue;
+	}
+	if (!strcasecmp(key, "syslog")) {
+	    int i;
+		if (!strcasecmp(val, "none")) 
+		    conf.syslog_facility = SYSLOG_DISABLE;
+		else
+		    for (i = 0; i < FACILITIES_AMOUNT; i++)
+			if (!strcasecmp(val, syslog_facilities[i].name))
+			    conf.syslog_facility = syslog_facilities[i].facility;
+		    continue;
+	}
+    }
+    fclose(fp);
+    return 1;
+}
+
+static int ip_cidr(const unsigned long ip, const short int mask, const unsigned long checkip) {
+    unsigned long ipaddr = 0;
+    unsigned long cidrip = 0;
+    unsigned long subnet = 0;
+
+    subnet = ~0;
+    subnet = subnet << (32 - mask);
+    cidrip = htonl(ip) & subnet;
+    ipaddr = ntohl(checkip) & subnet;
+    if (cidrip == ipaddr) return 1;
+    return 0;
+}
+
+static int ip_check(const unsigned long checkip) {
+    CIDR *it = conf.cidrs;
+
+    while (it) {
+	if (ip_cidr(it->ip, it->mask, checkip)) return 1;
+	it = it->next;
+    }
+    return 0;
+}
+
+static unsigned long natip_check(const unsigned long checkip) {
+    IPNAT *it = conf.ipnats;
+    while (it) {
+		if (it->srcip == checkip) return it->destip;
+		it = it->next;
+    }
+    return 0;
+}
+
+static int ptr_check(const char *ptr) {
+    STR *it = conf.ptrs;
+
+    while (it) {
+	if (it->str && strlen(it->str) <= strlen(ptr) && !strcasecmp(ptr + strlen(ptr) - strlen(it->str), it->str)) return 1;
+	it = it->next;
+    }
+    return 0;
+}
+
+static int from_check(const char *from) {
+    STR *it = conf.froms;
+
+    while (it) {
+	if (it->str && strstr(from, it->str)) return 1;
+	it = it->next;
+    }
+    return 0;
+}
+
+static int to_check(const char *to) {
+    STR *it = conf.tos;
+
+    while (it) {
+	if (it->str && strstr(to, it->str)) return 1;
+	it = it->next;
+    }
+    return 0;
+}
 static char * trim_space(char *str) {
     char *end;
     while (isspace(*str)) { // skip leading whitespace
@@ -397,14 +861,14 @@ static sfsistat smf_connect(SMFICTX *ctx, char *name, _SOCK_ADDR *sa) {
 	    break;
 	}
     }
-    if (conf.cidrs && config_ip_check(inet_addr(host))) return SMFIS_ACCEPT;
-    if (conf.ptrs && config_ptr_check(name)) return SMFIS_ACCEPT;
+    if (conf.cidrs && ip_check(inet_addr(host))) return SMFIS_ACCEPT;
+    if (conf.ptrs && ptr_check(name)) return SMFIS_ACCEPT;
     if (!(context = calloc(1, sizeof(*context)))) {
 			log_message(LOG_ERR, "[ERROR] %s", strerror(errno)); // LCOV_EXCL_LINE
 			return SMFIS_ACCEPT; // LCOV_EXCL_LINE
     }
     smfi_setpriv(ctx, context);
-    if (conf.ipnats && (d_ip = config_natip_check(inet_addr(host)))) {
+    if (conf.ipnats && (d_ip = natip_check(inet_addr(host)))) {
 		snprintf(context->addr, sizeof(context->addr), "%li.%li.%li.%li",
 			d_ip & 0xff, d_ip >> 8 & 0xff, d_ip >> 16 & 0xff, d_ip >> 24 & 0xff);
         log_message(LOG_INFO, "Found  NAT IP address. Original: %s . Final %li (%s)", host, d_ip,context->addr);
@@ -459,7 +923,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	}
     if (!strstr(context->from, "<>")) {
 	strtolower(context->sender);
-	if (conf.froms && config_from_check(context->sender)) return SMFIS_ACCEPT;
+	if (conf.froms && from_check(context->sender)) return SMFIS_ACCEPT;
     }
     SAFE_FREE(context->rcpts);
     SAFE_FREE(context->subject);
@@ -502,41 +966,33 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
     SPF_request_set_helo_dom(spf_request, context->helo);
     SPF_request_set_env_from(spf_request, context->sender);
     if (SPF_request_query_mailfrom(spf_request, &spf_response)) {
-            if (!spf_response) goto done;
-            status = SPF_response_result(spf_response);
-            if ((status == SPF_RESULT_NONE) && conf.best_guess) {
-                    if (!(SPF_request_query_fallback(spf_request, &spf_response,(char *)SPF_GUESS_RECORD)))
-                            goto done;
-                    context->is_best_guess = 1;
-                    status = SPF_response_result(spf_response);
+	log_message(LOG_INFO, "SPF none: ip=%s, fqdn=%s, helo=%s, from=%s", context->addr, context->fqdn, context->helo, context->from);
+    if ((status == SPF_RESULT_NONE) || (status == SPF_RESULT_INVALID)) {
+            if (conf.refuse_none && !strstr(context->from, "<>")) {
+                    char reject[2 * MAXLINE];
+                    snprintf(reject, sizeof(reject), "Sorry %s, we only accept mail from SPF enabled domains.", context->sender);
+                    if (spf_response) SPF_response_free(spf_response);
+                    if (spf_request) SPF_request_free(spf_request);
+                    if (spf_server) SPF_server_free(spf_server);
+                    smfi_setreply(ctx, "550" , "5.7.1", reject);
+                    return SMFIS_REJECT;
             }
-            if ((status == SPF_RESULT_NONE) || (status == SPF_RESULT_INVALID)) {
-                    log_message(LOG_INFO, "SPF none: ip=%s, fqdn=%s, helo=%s, from=%s", context->addr, context->fqdn, context->helo, context->from);
-                    if (conf.refuse_none && !strstr(context->from, "<>")) {
-                            char reject[2 * MAXLINE];
-                            snprintf(reject, sizeof(reject), "Sorry %s, we only accept mail from SPF enabled domains.", context->sender);
-                            if (spf_response) SPF_response_free(spf_response);
-                            if (spf_request) SPF_request_free(spf_request);
-                            if (spf_server) SPF_server_free(spf_server);
-                            smfi_setreply(ctx, "550" , "5.7.1", reject);
-                            return SMFIS_REJECT;
-                    }
-                    if (conf.refuse_none_helo && strstr(context->from, "<>")) {
-                            char reject[2 * MAXLINE];
-                            snprintf(reject, sizeof(reject), "Sorry %s, we only accept empty senders from enabled servers (HELO identity)", context->sender);
-                            if (spf_response) SPF_response_free(spf_response);
-                            if (spf_request) SPF_request_free(spf_request);
-                            if (spf_server) SPF_server_free(spf_server);
-                            smfi_setreply(ctx, "550" , "5.7.1", reject);
-                            return SMFIS_REJECT;
-                    }
+            if (conf.refuse_none_helo && strstr(context->from, "<>")) {
+                    char reject[2 * MAXLINE];
+                    snprintf(reject, sizeof(reject), "Sorry %s, we only accept empty senders from enabled servers (HELO identity)", context->sender);
+                    if (spf_response) SPF_response_free(spf_response);
+                    if (spf_request) SPF_request_free(spf_request);
+                    if (spf_server) SPF_server_free(spf_server);
+                    smfi_setreply(ctx, "550" , "5.7.1", reject);
+                    return SMFIS_REJECT;
             }
-            if (cache && conf.spf_ttl) {
-                    mutex_lock(&cache_mutex);
-                    cache_put(context->key, conf.spf_ttl, SPF_RESULT_NONE);
-                    mutex_unlock(&cache_mutex);
-            }
-            goto done;
+    }
+	if (cache && conf.spf_ttl) {
+	    mutex_lock(&cache_mutex);
+	    cache_put(context->key, conf.spf_ttl, SPF_RESULT_NONE);
+	    mutex_unlock(&cache_mutex);
+	}
+	goto done;
     }
     if (!spf_response) goto done;
     status = SPF_response_result(spf_response);
@@ -606,7 +1062,7 @@ static sfsistat smf_envrcpt(SMFICTX *ctx, char **args) {
     }
     if (conf.tos) {
 	strtolower(context->recipient);
-	if (config_to_check(context->recipient)) return SMFIS_ACCEPT;
+	if (to_check(context->recipient)) return SMFIS_ACCEPT;
 	if (context->status == SPF_RESULT_FAIL && conf.refuse_fail) {
 	    char reject[2 * MAXLINE];
 
@@ -661,28 +1117,28 @@ static sfsistat smf_eom(SMFICTX *ctx) {
 	if ((spf_hdr = calloc(1, MAX_HEADER_SIZE))) {
 	    switch (context->status) {
 		case SPF_RESULT_PASS:
-		    snprintf(spf_hdr, MAX_HEADER_SIZE, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s%s",
-			authserv_id, "pass", context->sender, context->helo, context->is_best_guess?SPF_GUESS_TEXT:"");
+		    snprintf(spf_hdr, MAX_HEADER_SIZE, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
+			authserv_id, "pass", context->sender, context->helo);
 		    break;
 		case SPF_RESULT_FAIL:
-		    snprintf(spf_hdr, MAX_HEADER_SIZE, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s%s",
-			authserv_id, "fail", context->sender, context->helo, context->is_best_guess?SPF_GUESS_TEXT:"");
+		    snprintf(spf_hdr, MAX_HEADER_SIZE, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
+			authserv_id, "fail", context->sender, context->helo);
 		    break;
 		case SPF_RESULT_SOFTFAIL:
-		    snprintf(spf_hdr, MAX_HEADER_SIZE, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s%s",
-			authserv_id, "softfail", context->sender, context->helo, context->is_best_guess?SPF_GUESS_TEXT:"");
+		    snprintf(spf_hdr, MAX_HEADER_SIZE, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
+			authserv_id, "softfail", context->sender, context->helo);
 		    break;
 		case SPF_RESULT_NEUTRAL:
-		    snprintf(spf_hdr, MAX_HEADER_SIZE, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s%s",
-			authserv_id, "neutral", context->sender, context->helo, context->is_best_guess?SPF_GUESS_TEXT:"");
+		    snprintf(spf_hdr, MAX_HEADER_SIZE, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
+			authserv_id, "neutral", context->sender, context->helo);
 		    break;
 		case SPF_RESULT_NONE:
 		default:
-		    snprintf(spf_hdr, MAX_HEADER_SIZE, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s%s",
-			authserv_id, "none", context->sender, context->helo, context->is_best_guess?SPF_GUESS_TEXT:"");
+		    snprintf(spf_hdr, MAX_HEADER_SIZE, "%s; spf=%s smtp.mailfrom=%s smtp.helo=%s",
+			authserv_id, "none", context->sender, context->helo);
 		    break;
 	    }
-	    smfi_insheader(ctx, 0, "Authentication-Results", spf_hdr);
+	    smfi_insheader(ctx, 1, "Authentication-Results", spf_hdr);
 	    free(spf_hdr);
 	}
     }
@@ -805,12 +1261,9 @@ int main(int argc, char **argv) {
 		break;
 	}
     }
-    /* Initialize configuration module */
-    if (config_init() != 0) {
-	fprintf(stderr, "Error: smf-spf: configuration initialization failed\n");
-	goto done;
-    }
-    if (!config_load(config_file)) { 
+    memset(&conf, 0, sizeof(conf));
+    regcomp(&re_ipv4, IPV4_DOT_DECIMAL, REG_EXTENDED|REG_ICASE);
+    if (!load_config()) { 
 		fprintf(stderr, "Warning: smf-spf: loading configuration file %s failed\n", config_file);
 		goto done;
 	}
@@ -866,7 +1319,7 @@ int main(int argc, char **argv) {
     if (cache) cache_destroy();
     pthread_mutex_destroy(&cache_mutex);
 done:
-    config_free();
+    free_config();
     closelog();
     return ret;
 }

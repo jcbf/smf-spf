@@ -1,0 +1,57 @@
+# Development Dockerfile for smf-spf
+# Build with: docker build -f Dockerfile.dev -t smf-spf-dev .
+# Run with:   docker run -it --rm -v $(pwd):/workspace smf-spf-dev
+#
+# This image matches the GitHub CI environment (Ubuntu 22.04) for local development.
+
+FROM ubuntu:22.04
+
+LABEL maintainer="smf-spf contributors" \
+      description="Development environment for smf-spf milter"
+
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
+
+# Install build dependencies and development tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Build essentials
+    build-essential \
+    gcc \
+    make \
+    pkg-config \
+    # Required libraries
+    libmilter-dev \
+    libspf2-dev \
+    libspf2-2 \
+    # Testing tools
+    opendkim-tools \
+    check \
+    # Coverage tools
+    lcov \
+    # Debug tools
+    gdb \
+    valgrind \
+    # Development utilities
+    git \
+    vim \
+    less \
+    curl \
+    # Clean up
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up workspace
+WORKDIR /workspace
+
+# Create a non-root user for development
+RUN useradd -m -s /bin/bash developer \
+    && mkdir -p /var/run/smfs \
+    && chown developer:developer /var/run/smfs
+
+# Default to running as root for build tasks
+# Switch to developer user for runtime if needed
+
+# Default command
+CMD ["/bin/bash"]

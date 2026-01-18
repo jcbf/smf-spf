@@ -1,0 +1,135 @@
+About
+=====
+  It's a lightweight, fast and reliable Sendmail milter that implements the
+Sender Policy Framework anti SPAM technology with the help of the libSPF2
+library. It checks SPF records to make sure that e-Mail messages are authorized
+by the domain name that it is coming from.
+  It's an alternative for the spfmilter, spf-milter and milter-spiff milters.
+
+  Features:
+
+    - external editable configuration file;
+    - whitelist by an IP address (in CIDR notation);
+    - whitelist by a PTR (reverse DNS) record;
+    - whitelist by an envelope sender e-Mail address;
+    - whitelist by an envelope recipient e-Mail address;
+    - scalable and tunable fast in-memory cache engine;
+    - SMTP AUTH support;
+    - experimental RFC-4408 standard compliance;
+    - standard Received-SPF: header builder;
+    - option to blocking of e-Mail messages at SPF Fail results;
+    - quarantine mode for e-Mail messages at SPF Fail/SoftFail results;
+    - option to Subject tagging of e-Mail messages at SPF Fail/SoftFail results.
+
+Install
+=======
+  Requirements: Linux/FreeBSD/Solaris, Sendmail v8.11 and higher compiled with
+the MILTER API support enabled, Sendmail Development Kit, POSIX threads library,
+libSPF2 library. Fast local caching DNS server is very recommended.
+This milter required the libSPF2 v1.2.5 from http://www.libspf2.org/
+Under FreeBSD the BIND v8 is required (pkg_add -r bind) for libSPF2 building.
+
+  Edit the Makefile according to version of your Sendmail program and OS.
+
+  Under the root account:
+make
+make install
+
+  Inspect and edit the /etc/mail/smfs/smf-spf.conf file.
+
+/usr/local/sbin/smf-spf
+or
+/usr/local/sbin/smf-spf -c /etc/mail/smfs/smf-spf.conf
+
+  Add this milter to start-up scripts before starting of Sendmail daemon.
+Look at the contributed samples of start-up scripts.
+
+  Add these lines to your Sendmail configuration file (usually sendmail.mc):
+define(`confMILTER_MACROS_HELO', confMILTER_MACROS_HELO`, {verify}')dnl
+INPUT_MAIL_FILTER(`smf-spf', `S=unix:/var/run/smfs/smf-spf.sock, T=S:30s;R:1m')dnl
+
+IMPORTANT: make sure that /var/run is not a group writable directory! If so,
+or chmod 755 /var/run, or if it's impossible switch to another directory.
+
+IMPORTANT: make sure that libmilter is compiled with BROKEN_PTHREAD_SLEEP defined.
+If this symbol is not defined, libmilter will use sleep() in signal-handler thread,
+which may cause various program misbehaviors, including coredumps.
+To rebuild Sendmail with this symbol defined, add the following line to your
+Sendmail/devtools/Site/site.config.m4:
+
+  APPENDDEF(`confENVDEF', `-DBROKEN_PTHREAD_SLEEP')
+
+If you have the smf-zombie, smf-sav and smf-grey milters installed, the smf-spf milter
+should be inserted after the smf-zombie, smf-sav milters and before the smf-grey milter.
+
+Rebuild your Sendmail configuration file and restart Sendmail daemon.
+
+  Under Linux add this line to your syslog.conf file and restart Syslog daemon:
+xxx.info	-/var/log/spf.log
+
+  Under FreeBSD run this command: touch /var/log/spf.log
+Then, add these lines to your syslog.conf file and restart Syslog daemon:
+!smf-spf
+xxx.info	-/var/log/spf.log
+
+Where xxx is the corresponded syslog facility from your smf-spf configuration
+file.
+
+If you want to exclude from logging the SPF None results and cached SPF results,
+set the syslog priority to notice instead info. They are just will be
+filtered out by Syslog daemon.
+
+  And, of course, don't forget to publish your own SPF record like this:
+"v=spf1 a mx -all", or use the SPF wizard from http://www.openspf.org/wizard.html
+to generate an exhaustive record.
+
+In the quarantine mode SPF Fail/SoftFail e-Mail messages will be redirected
+to the specified quarantine mailbox. All envelope recipients exclude whitelisted
+will be removed, and inserted into original e-Mail messages as X-SPF-Original-To:
+headers.
+
+Notes: the successfully authenticated senders will bypass all SPF checks.
+
+It's very useful to add at your Sendmail configuration file these lines:
+
+define(`confPRIVACY_FLAGS', `goaway,noetrn,nobodyreturn,noreceipts')dnl
+define(`confTO_COMMAND', `1m')dnl
+define(`confTO_IDENT', `0s')dnl
+define(`confMAX_DAEMON_CHILDREN', `256')dnl enlarge if it's required
+define(`confCONNECTION_RATE_THROTTLE', `8')dnl enlarge if it's required
+define(`confBAD_RCPT_THROTTLE', `1')dnl Sendmail v8.12+
+FEATURE(`greet_pause', `5000')dnl Sendmail v8.13+
+
+TODO
+====
+  (min) whitelists auto reloading;
+  (?)   something else? just let me know.
+
+(min) - minor priority;
+(med) - medium priority;
+(maj) - major priority.
+
+  If you like this program, consider to purchase any of my commercial milters
+from http://spamfree.ru/
+  Thank you!
+
+======================================
+Become a sponsor for the SMFS project!
+======================================
+
+Any suggestions, support requests and bugs please send to <me@kurmanin.info>
+
+Subscribe to SMFS announcements mailing list here:
+  https://lists.sourceforge.net/lists/listinfo/smfs-list
+
+Subscribe to SMFS users mailing list here:
+  https://lists.sourceforge.net/lists/listinfo/smfs-users
+
+SMFS development blog (opened for all):
+  http://smfs.wordpress.com/
+
+http://smfs.sourceforge.net/
+http://sourceforge.net/projects/smfs/
+http://kurmanin.info/
+
+    

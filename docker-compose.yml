@@ -50,6 +50,35 @@ services:
           memory: 64M
 
   # ============================================================================
+  # Development environment for building and testing
+  # ============================================================================
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: smf-spf-dev:latest
+    container_name: smf-spf-dev
+    profiles:
+      - dev
+
+    volumes:
+      # Mount the source code for development
+      - .:/workspace
+      # Persist bash history
+      - smf-spf-dev-history:/root/.bash_history
+
+    working_dir: /workspace
+
+    # Keep container running for interactive development
+    stdin_open: true
+    tty: true
+
+    networks:
+      - mail-network
+
+    command: /bin/bash
+
+  # ============================================================================
   # Optional: Postfix MTA for testing
   # ============================================================================
   postfix:
@@ -79,6 +108,8 @@ services:
 
 volumes:
   smf-spf-data:
+    driver: local
+  smf-spf-dev-history:
     driver: local
 
 networks:

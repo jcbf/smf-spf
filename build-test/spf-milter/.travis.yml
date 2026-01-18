@@ -1,0 +1,30 @@
+language: c
+sudo: 'required'
+services:
+  - 'docker'
+compiler:
+  - clang
+  - gcc
+notifications:
+  email:
+    - underspell@gmail.com
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -y libmilter-dev libspf2-dev libspf2-2 opendkim-tools lcov
+  - gem install coveralls-lcov
+script:
+  -  make
+  -  make coverage
+  -  make test
+after_success:
+  - lcov --directory . --capture --output-file coverage.info
+  - lcov --remove coverage.info 'tests/*' 'usr/*' --output-file coverage.info
+  - lcov --list coverage.info
+  - coveralls-lcov --repo-token ${COVERALLS_TOKEN} coverage.info
+  - bash <(curl -s https://codecov.io/bash)
+  - if [[ "$TRAVIS_BRANCH" == "master" ]]; then
+      echo "$DOCKER_PASSWORD" | docker login -u $DOCKER_USERNAME --password-stdin;
+      export TAG=`grep "define VERSION" smf-spf.c | cut -d\"  -f2` ;
+      docker build .  --tag my-image-name:$TAG ;
+      docker push underspell/smf-spf  ;
+    fi

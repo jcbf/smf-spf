@@ -1,0 +1,90 @@
+Wed Jan 10 2007 (ek)
+====================
+smf-spf v2.0.2
+
+  + cosmetic enhancements were made
+
+Fri Sep 22 2006 (ek)
+====================
+smf-spf v2.0.1
+
+  ! double-freeing memory bug with multi-messages
+    SMTP sessions in quarantine mode was fixed
+  + new TODO tasks were added
+  + cosmetic enhancements were made
+
+Mon Sep 18 2006 (ek)
+====================
+smf-spf v2.0.0
+
+  + support for an external editable
+    configuration file was implemented
+  + whitelist by an IP address
+    (in CIDR notation) was implemented
+  + whitelist by a PTR (reverse DNS) record
+    was implemented
+  + whitelist by an envelope sender
+    e-Mail address was implemented
+  + whitelist by an envelope recipient
+    e-Mail address was implemented
+  + scalable fast in-memory cache engine
+    was implemented
+  + option to Subject tagging was implemented
+  + quarantine mode was implemented
+  + new TODO tasks were added
+  + cosmetic enhancements were made
+
+Wed Jun 28 2006 (ek)
+====================
+smf-spf v1.3.1
+
+ ! workaround for the Sendmail socket unsafe
+   error on some platforms was implemented
+ - disk cache for SPF results has been removed
+ + configuration file, default user and
+   working directory were changed
+ + format of log records was changed
+ + some samples of start-up scripts were added
+ + new TODO tasks were added
+ + cosmetic enhancements were made
+
+Mon Nov 21 2005 (ek)
+====================
+smf-spf v1.3.0
+
+ + SPF cache has been fully redesigned
+ - MD5 hash has been removed due to
+   collisions possibility
+ + successfully authenticated senders
+   will bypass the filtering
+ + cosmetic enhancements were made
+
+Tue Sep 06 2005 (ek)
+====================
+smf-spf v1.2.1
+
+ ! cache databases can be
+   eventually broken
+
+Thu Aug 18 2005 (ek)
+====================
+smf-spf v1.2.0
+
+ + SPF Soft Fail, Neutral and None
+   results cache
+ + SPF results header reconstruction
+   for cached records
+
+Mon Aug 01 2005 (ek)
+====================
+smf-spf v1.1.0
+
+ + reaction on SPF Soft Fail result
+ + SPF Pass and Hard Fail results cache
+ + cosmetic enhancements were made
+
+Tue Jul 05 2005 (ek)
+====================
+smf-spf v1.0.0
+
+ * public release
