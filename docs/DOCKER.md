@@ -54,6 +54,113 @@ docker build -t smf-spf:local .
 docker run -d -p 8890:8890 smf-spf:local
 ```
 
+## Development Environment
+
+A development Docker image is provided for building, testing, and generating coverage reports. This image matches the GitHub CI environment (Ubuntu 22.04).
+
+### Building the Development Image
+
+```bash
+# Build the development image
+docker build -f Dockerfile.dev -t smf-spf-dev .
+
+# Or using docker-compose
+docker-compose --profile dev build dev
+```
+
+### Interactive Development
+
+```bash
+# Start an interactive shell
+docker run -it --rm -v $(pwd):/workspace smf-spf-dev
+
+# Or using docker-compose
+docker-compose --profile dev run --rm dev
+```
+
+### Building the Project
+
+```bash
+# Build the binary
+docker run --rm -v $(pwd):/workspace smf-spf-dev make
+
+# Clean and rebuild
+docker run --rm -v $(pwd):/workspace smf-spf-dev make clean all
+```
+
+### Running Tests
+
+```bash
+# Run the full test suite with coverage
+docker run --rm -v $(pwd):/workspace smf-spf-dev make test
+
+# Run only unit tests
+docker run --rm -v $(pwd):/workspace smf-spf-dev make unit-tests
+```
+
+### Generating Coverage Reports
+
+```bash
+# Build with coverage instrumentation and run tests
+docker run --rm -v $(pwd):/workspace smf-spf-dev make coverage
+
+# Generate HTML coverage report (after running tests)
+docker run --rm -v $(pwd):/workspace smf-spf-dev make showcov
+
+# View the coverage report
+open out/index.html  # macOS
+xdg-open out/index.html  # Linux
+```
+
+### Complete Test and Coverage Workflow
+
+```bash
+# One-liner: clean, build with coverage, run tests, generate report
+docker run --rm -v $(pwd):/workspace smf-spf-dev \
+  sh -c "make clean && make coverage && make test && make showcov"
+```
+
+### Development Tools Available
+
+The development image includes:
+
+| Tool | Purpose |
+|------|---------|
+| `gcc` | C compiler |
+| `make` | Build automation |
+| `gdb` | Debugger |
+| `valgrind` | Memory leak detection |
+| `lcov` | Coverage report generation |
+| `check` | Unit test framework |
+| `opendkim-tools` | Milter testing (miltertest) |
+
+### Debugging with Valgrind
+
+```bash
+# Run with memory leak detection
+docker run --rm -v $(pwd):/workspace smf-spf-dev \
+  valgrind --leak-check=full ./smf-spf -f -c smf-spf.conf
+
+# Check for threading issues
+docker run --rm -v $(pwd):/workspace smf-spf-dev \
+  valgrind --tool=helgrind ./smf-spf -f -c smf-spf.conf
+```
+
+### Using docker-compose for Development
+
+The `docker-compose.yml` includes a development profile:
+
+```bash
+# Start development container
+docker-compose --profile dev up -d dev
+
+# Execute commands in the running container
+docker-compose --profile dev exec dev make test
+
+# Stop the development container
+docker-compose --profile dev down
+```
+
 ## Configuration
 
 ### Environment Variables
