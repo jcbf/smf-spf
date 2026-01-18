@@ -567,8 +567,9 @@ int config_load(const char *filepath) {
         if (!strcasecmp(key, "logto")) {
             FILE *logfp = fopen(val, "a");
             if (!logfp) {
-                syslog(LOG_ERR, "[CONFIG] Cannot open log file %s: %s", val, strerror(errno));
-                continue;
+                fprintf(stderr, "Error: Cannot open log file %s: %s\n", val, strerror(errno));
+                fclose(fp);
+                return 0;
             }
             if (conf.log_file)
                 fclose(conf.log_file);
