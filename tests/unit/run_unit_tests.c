@@ -11,6 +11,7 @@ extern Suite *string_utils_suite(void);
 extern Suite *ip_utils_suite(void);
 extern Suite *memory_suite(void);
 extern Suite *logging_suite(void);
+extern Suite *config_suite(void);
 
 int main(void)
 {
@@ -24,6 +25,7 @@ int main(void)
     srunner_add_suite(sr, ip_utils_suite());
     srunner_add_suite(sr, memory_suite());
     srunner_add_suite(sr, logging_suite());
+    srunner_add_suite(sr, config_suite());
 
     /* Run the tests */
     srunner_run_all(sr, CK_VERBOSE);

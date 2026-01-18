@@ -13,8 +13,12 @@ CFLAGS = -O2 -D_REENTRANT -fomit-frame-pointer -Isrc -I/usr/local/include
 UTIL_SRCS = src/utils/string_utils.c src/utils/logging.c src/utils/memory.c src/utils/ip_utils.c
 UTIL_OBJS = $(UTIL_SRCS:.c=.o)
 
+# Config module source files
+CONFIG_SRCS = src/config/config.c
+CONFIG_OBJS = $(CONFIG_SRCS:.c=.o)
+
 # Unit test files
-UNIT_TEST_SRCS = tests/unit/test_string_utils.c tests/unit/test_ip_utils.c tests/unit/test_memory.c tests/unit/test_logging.c
+UNIT_TEST_SRCS = tests/unit/test_string_utils.c tests/unit/test_ip_utils.c tests/unit/test_memory.c tests/unit/test_logging.c tests/unit/test_config.c
 UNIT_TEST_OBJS = $(UNIT_TEST_SRCS:.c=.o)
 UNIT_TEST_RUNNER = tests/unit/run_unit_tests.o
 
@@ -23,7 +27,7 @@ CHECK_CFLAGS = $(shell pkg-config --cflags check)
 CHECK_LDFLAGS = $(shell pkg-config --libs check)
 
 # All object files
-OBJS = smf-spf.o $(UTIL_OBJS)
+OBJS = smf-spf.o $(UTIL_OBJS) $(CONFIG_OBJS)
 
 # Linux
 LDFLAGS = -lmilter -lpthread -L/usr/lib/libmilter -L/usr/local/lib -lspf2
@@ -50,6 +54,10 @@ smf-spf.o: smf-spf.c
 src/utils/%.o: src/utils/%.c src/utils/%.h
 	$(CC) -O2 -D_REENTRANT -fomit-frame-pointer -Isrc -c $< -o $@
 
+# Pattern rule for config module
+src/config/%.o: src/config/%.c src/config/%.h
+	$(CC) -O2 -D_REENTRANT -fomit-frame-pointer -Isrc -c $< -o $@
+
 coverage: clean
 	$(CC) $(CFLAGS) -c smf-spf.c -coverage
 	$(foreach src,$(UTIL_SRCS),$(CC) $(CFLAGS) -c $(src) -coverage -o $(src:.c=.o);)
@@ -65,16 +73,17 @@ showcov:
 clean:
 	rm -f smf-spf.o smf-spf smf.spf.gcno sample coverage.info smf-spf.gc*
 	rm -f $(UTIL_OBJS) src/utils/*.gcno src/utils/*.gcda
+	rm -f $(CONFIG_OBJS) src/config/*.gcno src/config/*.gcda
 	rm -f $(UNIT_TEST_OBJS) $(UNIT_TEST_RUNNER) tests/unit/run_unit_tests
 	rm -rf ./out
 
 # Unit test compilation rules
 tests/unit/%.o: tests/unit/%.c
-	$(CC) -O2 -D_REENTRANT -Isrc -Isrc/utils $(CHECK_CFLAGS) -c $< -o $@
+	$(CC) -O2 -D_REENTRANT -Isrc -Isrc/utils -Isrc/config $(CHECK_CFLAGS) -c $< -o $@
 
 # Unit test runner
-tests/unit/run_unit_tests: $(UNIT_TEST_OBJS) $(UNIT_TEST_RUNNER) $(UTIL_OBJS)
-	$(CC) -o $@ $(UNIT_TEST_OBJS) $(UNIT_TEST_RUNNER) $(UTIL_OBJS) $(CHECK_LDFLAGS)
+tests/unit/run_unit_tests: $(UNIT_TEST_OBJS) $(UNIT_TEST_RUNNER) $(UTIL_OBJS) $(CONFIG_OBJS)
+	$(CC) -o $@ $(UNIT_TEST_OBJS) $(UNIT_TEST_RUNNER) $(UTIL_OBJS) $(CONFIG_OBJS) $(CHECK_LDFLAGS)
 
 # Run unit tests
 unit-tests: tests/unit/run_unit_tests

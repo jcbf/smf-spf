@@ -43,6 +43,7 @@
 #include <limits.h>
 #include <stdbool.h>
 #include "spf2/spf.h"
+#include "config/config.h"
 
 #define CONFIG_FILE		"/etc/mail/smfs/smf-spf.conf"
 #define WORK_SPACE		"/var/run/smfs"
@@ -127,58 +128,7 @@ typedef struct cache_item {
     struct cache_item *next;
 } cache_item;
 
-typedef struct CIDR {
-    unsigned long ip;
-    unsigned short int mask;
-    struct CIDR *next;
-} CIDR;
-
-typedef struct IPNAT {
-    unsigned long srcip;
-    unsigned long destip;
-    struct IPNAT *next;
-} IPNAT;
-
-typedef struct STR {
-    char *str;
-    struct STR *next;
-} STR;
-
-typedef struct config {
-    char *tag;
-    char *quarantine_box;
-    FILE *log_file;
-    char *run_as_user;
-    char *sendmail_socket;
-    IPNAT *ipnats;
-    CIDR *cidrs;
-    STR *ptrs;
-    STR *froms;
-    STR *tos;
-    int relaxed_localpart;
-    int best_guess;
-    int refuse_fail;
-    int refuse_none;
-    int refuse_none_helo;
-    int soft_fail;
-    int accept_temperror;
-    int tag_subject;
-    int add_header;
-    int add_recv_spf_header;
-    int quarantine;
-    int syslog_facility;
-    int daemonize;
-    bool skip_ndr;
-    unsigned long spf_ttl;
-    char *fixed_ip;
-    bool skip_auth;
-    char *reject_reason;
-} config;
-
-typedef struct facilities {
-    char *name;
-    int facility;
-} facilities;
+/* Struct definitions now provided by config module */
 
 struct context {
     char addr[64];
@@ -196,27 +146,15 @@ struct context {
     SPF_result_t status;
 };
 
-static regex_t re_ipv4;
+/* IPv4 regex and facilities moved to config module */
 static cache_item **cache = NULL;
 static const char *config_file = CONFIG_FILE;
 static int foreground = 0;
-static config conf;
+/* conf is now extern from config module */
 static char *daemon_name;
 static char hostname[HOST_NAME_MAX+1];
 static pid_t mypid = 0;
 static pthread_mutex_t cache_mutex;
-static facilities syslog_facilities[] = {
-    { "daemon", LOG_DAEMON },
-    { "mail", LOG_MAIL },
-    { "local0", LOG_LOCAL0 },
-    { "local1", LOG_LOCAL1 },
-    { "local2", LOG_LOCAL2 },
-    { "local3", LOG_LOCAL3 },
-    { "local4", LOG_LOCAL4 },
-    { "local5", LOG_LOCAL5 },
-    { "local6", LOG_LOCAL6 },
-    { "local7", LOG_LOCAL7 }
-};
 static char *authserv_id = NULL;
 
 static sfsistat smf_connect(SMFICTX *, char *, _SOCK_ADDR *);
@@ -271,31 +209,7 @@ static void strtolower(register char *str) {
 	if (isascii(*str) && isupper(*str)) *str = tolower(*str);
 }
 
-static unsigned long translate(char *value) {
-    unsigned long unit;
-    size_t len = strlen(value);
-
-    switch (value[len - 1]) {
-	case 'm':
-	case 'M':
-	    unit = 60;
-	    value[len - 1] = '\0';
-	    break;
-	case 'h':
-	case 'H':
-	    unit = 3600;
-	    value[len - 1] = '\0';
-	    break;
-	case 'd':
-	case 'D':
-	    unit = 86400;
-	    value[len - 1] = '\0';
-	    break;
-	default:
-	    return atol(value);
-    }
-    return (atol(value) * unit);
-}
+/* translate() function moved to config module as config_translate_time() */
 
 static unsigned long hash_code(register const unsigned char *key) {
     register unsigned long hash = 0;
@@ -682,7 +596,7 @@ static int load_config(void) {
 	    continue;
 	}
 	if (!strcasecmp(key, "ttl")) {
-	    conf.spf_ttl = translate(val);
+	    conf.spf_ttl = config_translate_time(val);
 	    continue;
 	}
 	if (!strcasecmp(key, "user")) {
@@ -723,7 +637,7 @@ static int ip_cidr(const unsigned long ip, const short int mask, const unsigned 
     return 0;
 }
 
-static int ip_check(const unsigned long checkip) {
+static int config_ip_check(const unsigned long checkip) {
     CIDR *it = conf.cidrs;
 
     while (it) {
@@ -733,7 +647,7 @@ static int ip_check(const unsigned long checkip) {
     return 0;
 }
 
-static unsigned long natip_check(const unsigned long checkip) {
+static unsigned long natconfig_ip_check(const unsigned long checkip) {
     IPNAT *it = conf.ipnats;
     while (it) {
 		if (it->srcip == checkip) return it->destip;
@@ -742,7 +656,7 @@ static unsigned long natip_check(const unsigned long checkip) {
     return 0;
 }
 
-static int ptr_check(const char *ptr) {
+static int config_ptr_check(const char *ptr) {
     STR *it = conf.ptrs;
 
     while (it) {
@@ -752,7 +666,7 @@ static int ptr_check(const char *ptr) {
     return 0;
 }
 
-static int from_check(const char *from) {
+static int config_from_check(const char *from) {
     STR *it = conf.froms;
 
     while (it) {
@@ -762,7 +676,7 @@ static int from_check(const char *from) {
     return 0;
 }
 
-static int to_check(const char *to) {
+static int config_to_check(const char *to) {
     STR *it = conf.tos;
 
     while (it) {
@@ -871,14 +785,14 @@ static sfsistat smf_connect(SMFICTX *ctx, char *name, _SOCK_ADDR *sa) {
 	    break;
 	}
     }
-    if (conf.cidrs && ip_check(inet_addr(host))) return SMFIS_ACCEPT;
-    if (conf.ptrs && ptr_check(name)) return SMFIS_ACCEPT;
+    if (conf.cidrs && config_ip_check(inet_addr(host))) return SMFIS_ACCEPT;
+    if (conf.ptrs && config_ptr_check(name)) return SMFIS_ACCEPT;
     if (!(context = calloc(1, sizeof(*context)))) {
 			log_message(LOG_ERR, "[ERROR] %s", strerror(errno)); // LCOV_EXCL_LINE
 			return SMFIS_ACCEPT; // LCOV_EXCL_LINE
     }
     smfi_setpriv(ctx, context);
-    if (conf.ipnats && (d_ip = natip_check(inet_addr(host)))) {
+    if (conf.ipnats && (d_ip = config_natip_check(inet_addr(host)))) {
 		snprintf(context->addr, sizeof(context->addr), "%li.%li.%li.%li",
 			d_ip & 0xff, d_ip >> 8 & 0xff, d_ip >> 16 & 0xff, d_ip >> 24 & 0xff);
         log_message(LOG_INFO, "Found  NAT IP address. Original: %s . Final %li (%s)", host, d_ip,context->addr);
@@ -931,7 +845,7 @@ static sfsistat smf_envfrom(SMFICTX *ctx, char **args) {
 	}
     if (!strstr(context->from, "<>")) {
 	strtolower(context->sender);
-	if (conf.froms && from_check(context->sender)) return SMFIS_ACCEPT;
+	if (conf.froms && config_from_check(context->sender)) return SMFIS_ACCEPT;
     }
     SAFE_FREE(context->rcpts);
     SAFE_FREE(context->subject);
@@ -1078,7 +992,7 @@ static sfsistat smf_envrcpt(SMFICTX *ctx, char **args) {
     }
     if (conf.tos) {
 	strtolower(context->recipient);
-	if (to_check(context->recipient)) return SMFIS_ACCEPT;
+	if (config_to_check(context->recipient)) return SMFIS_ACCEPT;
 	if (context->status == SPF_RESULT_FAIL && conf.refuse_fail) {
 	    char reject[2 * MAXLINE];
 
@@ -1269,9 +1183,12 @@ int main(int argc, char **argv) {
 		break;
 	}
     }
-    memset(&conf, 0, sizeof(conf));
-    regcomp(&re_ipv4, IPV4_DOT_DECIMAL, REG_EXTENDED|REG_ICASE);
-    if (!load_config()) { 
+    /* Initialize configuration module */
+    if (config_init() != 0) {
+	fprintf(stderr, "Error: smf-spf: configuration initialization failed\n");
+	goto done;
+    }
+    if (!config_load(config_file)) { 
 		fprintf(stderr, "Warning: smf-spf: loading configuration file %s failed\n", config_file);
 		goto done;
 	}
@@ -1327,7 +1244,7 @@ int main(int argc, char **argv) {
     if (cache) cache_destroy();
     pthread_mutex_destroy(&cache_mutex);
 done:
-    free_config();
+    config_free();
     closelog();
     return ret;
 }
