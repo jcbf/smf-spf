@@ -4,7 +4,7 @@
 # ============================================================================
 # Stage 1: Builder
 # ============================================================================
-FROM alpine:3.23.2 AS builder
+FROM alpine:3.23.3 AS builder
 
 LABEL maintainer="smf-spf contributors" \
       description="Build stage for smf-spf milter"
@@ -28,7 +28,7 @@ RUN make smf-spf && \
 # ============================================================================
 # Stage 2: Runtime
 # ============================================================================
-FROM alpine:3.23.2
+FROM alpine:3.23.3
 
 LABEL maintainer="smf-spf contributors" \
       description="Lightweight SPF milter for Sendmail/Postfix" \
