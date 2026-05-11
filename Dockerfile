@@ -19,6 +19,7 @@ RUN apk add --no-cache \
 # Copy source files
 WORKDIR /build
 COPY Makefile smf-spf.c ./
+COPY src/ src/
 
 # Build the binary (with optimizations)
 RUN make smf-spf && \
